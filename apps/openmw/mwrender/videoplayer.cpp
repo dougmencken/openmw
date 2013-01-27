@@ -277,8 +277,8 @@ class MovieAudioDecoder : public MWSound::Sound_Decoder
 
     AutoAVPacket mPacket;
     AVFrame *mFrame;
-    ssize_t mFramePos;
-    ssize_t mFrameSize;
+    size_t mFramePos;
+    size_t mFrameSize;
 
     double mAudioClock;
 
@@ -361,7 +361,7 @@ class MovieAudioDecoder : public MWSound::Sound_Decoder
     }
 
     void open(const std::string&)
-    { fail(std::string("Invalid call to ")+__PRETTY_FUNCTION__); }
+    { fail(std::string("Invalid call to ")+__FUNCTION__); }
 
     void close() { }
 
@@ -451,7 +451,7 @@ public:
                     break;
                 }
 
-                mFramePos = std::min<ssize_t>(mFrameSize, sample_skip);
+                mFramePos = std::min<size_t>(mFrameSize, sample_skip);
                 sample_skip -= mFramePos;
                 continue;
             }
@@ -507,7 +507,7 @@ public:
 
     size_t getSampleOffset()
     {
-        ssize_t clock_delay = (mFrameSize-mFramePos) / mAVStream->codec->channels /
+        size_t clock_delay = (mFrameSize-mFramePos) / mAVStream->codec->channels /
                               av_get_bytes_per_sample(mAVStream->codec->sample_fmt);
         return (size_t)(mAudioClock*mAVStream->codec->sample_rate) - clock_delay;
     }
