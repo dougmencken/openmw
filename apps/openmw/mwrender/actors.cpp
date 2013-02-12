@@ -3,14 +3,22 @@
 #include <OgreSceneNode.h>
 #include <OgreSceneManager.h>
 
+#include "../mwworld/ptr.hpp"
+
+#include "animation.hpp"
+#include "activatoranimation.hpp"
+#include "creatureanimation.hpp"
+#include "npcanimation.hpp"
+
 #include "renderconst.hpp"
 
 
 namespace MWRender
 {
+using namespace Ogre;
 
-Actors::~Actors(){
-
+Actors::~Actors()
+{
     PtrAnimationMap::iterator it = mAllActors.begin();
     for(;it != mAllActors.end();++it)
     {
@@ -22,15 +30,7 @@ Actors::~Actors(){
 void Actors::setMwRoot(Ogre::SceneNode* root)
 { mMwRoot = root; }
 
-void Actors::insertNPC(const MWWorld::Ptr &ptr, MWWorld::InventoryStore &inv)
-{
-    insertBegin(ptr, true, true);
-    NpcAnimation* anim = new MWRender::NpcAnimation(ptr, ptr.getRefData ().getBaseNode (), inv, RV_Actors);
-
-    mAllActors[ptr] = anim;
-}
-
-void Actors::insertBegin (const MWWorld::Ptr& ptr, bool enabled, bool static_)
+void Actors::insertBegin(const MWWorld::Ptr &ptr)
 {
     Ogre::SceneNode* cellnode;
     CellSceneNodeMap::const_iterator celliter = mCellSceneNodes.find(ptr.getCell());
@@ -62,17 +62,27 @@ void Actors::insertBegin (const MWWorld::Ptr& ptr, bool enabled, bool static_)
 
    // Rotates first around z, then y, then x
     insert->setOrientation(xr*yr*zr);
-    if (!enabled)
-         insert->setVisible (false);
     ptr.getRefData().setBaseNode(insert);
-
-
 }
-void Actors::insertCreature (const MWWorld::Ptr& ptr){
 
-    insertBegin(ptr, true, true);
-    CreatureAnimation* anim = new MWRender::CreatureAnimation(ptr);
-
+void Actors::insertNPC(const MWWorld::Ptr& ptr, MWWorld::InventoryStore& inv)
+{
+    insertBegin(ptr);
+    NpcAnimation* anim = new NpcAnimation(ptr, ptr.getRefData().getBaseNode(), inv, RV_Actors);
+    delete mAllActors[ptr];
+    mAllActors[ptr] = anim;
+}
+void Actors::insertCreature (const MWWorld::Ptr& ptr)
+{
+    insertBegin(ptr);
+    CreatureAnimation* anim = new CreatureAnimation(ptr);
+    delete mAllActors[ptr];
+    mAllActors[ptr] = anim;
+}
+void Actors::insertActivator (const MWWorld::Ptr& ptr)
+{
+    insertBegin(ptr);
+    ActivatorAnimation* anim = new ActivatorAnimation(ptr);
     delete mAllActors[ptr];
     mAllActors[ptr] = anim;
 }
@@ -125,22 +135,17 @@ void Actors::removeCell(MWWorld::Ptr::CellStore* store)
     }
 }
 
-void Actors::playAnimationGroup (const MWWorld::Ptr& ptr, const std::string& groupName, int mode, int number)
-{
-    PtrAnimationMap::const_iterator iter = mAllActors.find(ptr);
-    if(iter != mAllActors.end())
-        iter->second->playGroup(groupName, mode, number);
-}
-void Actors::skipAnimation (const MWWorld::Ptr& ptr)
-{
-    PtrAnimationMap::const_iterator iter = mAllActors.find(ptr);
-    if(iter != mAllActors.end())
-        iter->second->skipAnim();
-}
 void Actors::update (float duration)
 {
-    for(PtrAnimationMap::const_iterator iter = mAllActors.begin();iter != mAllActors.end();iter++)
-        iter->second->runAnimation(duration);
+    // Nothing to do
+}
+
+Animation* Actors::getAnimation(const MWWorld::Ptr &ptr)
+{
+    PtrAnimationMap::const_iterator iter = mAllActors.find(ptr);
+    if(iter != mAllActors.end())
+        return iter->second;
+    return NULL;
 }
 
 void Actors::updateObjectCell(const MWWorld::Ptr &ptr)

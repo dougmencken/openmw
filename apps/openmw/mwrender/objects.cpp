@@ -92,7 +92,7 @@ void Objects::insertMesh (const MWWorld::Ptr& ptr, const std::string& mesh)
     assert(insert);
 
     Ogre::AxisAlignedBox bounds = Ogre::AxisAlignedBox::BOX_NULL;
-    NifOgre::EntityList entities = NifOgre::NIFLoader::createEntities(insert, NULL, mesh);
+    NifOgre::EntityList entities = NifOgre::Loader::createEntities(insert, mesh);
     for(size_t i = 0;i < entities.mEntities.size();i++)
     {
         const Ogre::AxisAlignedBox &tmp = entities.mEntities[i]->getBoundingBox();
@@ -192,13 +192,15 @@ void Objects::insertMesh (const MWWorld::Ptr& ptr, const std::string& mesh)
 
         sg->setRenderQueueGroup(transparent ? RQG_Alpha : RQG_Main);
 
-        for(size_t i = 0;i < entities.mEntities.size();i++)
+        std::vector<Ogre::Entity*>::reverse_iterator iter = entities.mEntities.rbegin();
+        while(iter != entities.mEntities.rend())
         {
-            Ogre::Entity *ent = entities.mEntities[i];
-            insert->detachObject(ent);
-            sg->addEntity(ent,insert->_getDerivedPosition(),insert->_getDerivedOrientation(),insert->_getDerivedScale());
+            Ogre::Node *node = (*iter)->getParentNode();
+            sg->addEntity(*iter, node->_getDerivedPosition(), node->_getDerivedOrientation(), node->_getDerivedScale());
 
-            mRenderer.getScene()->destroyEntity(ent);
+            (*iter)->detachFromParent();
+            mRenderer.getScene()->destroyEntity(*iter);
+            iter++;
         }
     }
 }

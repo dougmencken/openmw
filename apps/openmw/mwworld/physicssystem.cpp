@@ -9,6 +9,10 @@
 #include <OgreCamera.h>
 #include <OgreTextureManager.h>
 
+#include <openengine/bullet/trace.h>
+#include <openengine/bullet/physic.hpp>
+#include <openengine/ogre/renderer.hpp>
+
 #include <components/nifbullet/bullet_nif_loader.hpp>
 
 //#include "../mwbase/world.hpp" // FIXME
@@ -21,23 +25,177 @@ using namespace Ogre;
 namespace MWWorld
 {
 
+    static const float sMaxSlope = 60.0f;
+    static const float sStepSize = 9.0f;
+    // Arbitrary number. To prevent infinite loops. They shouldn't happen but it's good to be prepared.
+    static const int sMaxIterations = 50;
+
+    class MovementSolver
+    {
+    private:
+        static bool stepMove(Ogre::Vector3& position, const Ogre::Vector3 &velocity, float remainingTime,
+                             float verticalRotation, const Ogre::Vector3 &halfExtents, bool isInterior,
+                             OEngine::Physic::PhysicEngine *engine)
+        {
+            traceResults trace; // no initialization needed
+
+            newtrace(&trace, position+Ogre::Vector3(0.0f,0.0f,sStepSize),
+                             position+Ogre::Vector3(0.0f,0.0f,sStepSize)+velocity*remainingTime,
+                    halfExtents, verticalRotation, isInterior, engine);
+            if(trace.fraction == 0.0f || (trace.fraction != 1.0f && getSlope(trace.planenormal) > sMaxSlope))
+                return false;
+
+            newtrace(&trace, trace.endpos, trace.endpos-Ogre::Vector3(0.0f,0.0f,sStepSize), halfExtents, verticalRotation, isInterior, engine);
+            if(getSlope(trace.planenormal) < sMaxSlope)
+            {
+                // only step down onto semi-horizontal surfaces. don't step down onto the side of a house or a wall.
+                position = trace.endpos;
+                return true;
+            }
+
+            return false;
+        }
+
+        static void clipVelocity(Ogre::Vector3& inout, const Ogre::Vector3& normal, float overbounce)
+        {
+            //Math stuff. Basically just project the velocity vector onto the plane represented by the normal.
+            //More specifically, it projects velocity onto the normal, takes that result, multiplies it by overbounce and then subtracts it from velocity.
+            float backoff = inout.dotProduct(normal);
+            if(backoff < 0.0f)
+                backoff *= overbounce;
+            else
+                backoff /= overbounce;
+
+            inout -= normal*backoff;
+        }
+
+        static void projectVelocity(Ogre::Vector3& velocity, const Ogre::Vector3& direction)
+        {
+            Ogre::Vector3 normalizedDirection(direction);
+            normalizedDirection.normalise();
+
+            // no divide by normalizedDirection.length necessary because it's normalized
+            velocity = normalizedDirection * velocity.dotProduct(normalizedDirection);
+        }
+
+        static float getSlope(const Ogre::Vector3 &normal)
+        {
+            return normal.angleBetween(Ogre::Vector3(0.0f,0.0f,1.0f)).valueDegrees();
+        }
+
+    public:
+        static Ogre::Vector3 move(const MWWorld::Ptr &ptr, const Ogre::Vector3 &movement, float time,
+                                  bool gravity, OEngine::Physic::PhysicEngine *engine)
+        {
+            const ESM::Position &refpos = ptr.getRefData().getPosition();
+            Ogre::Vector3 position(refpos.pos);
+
+            /* Anything to collide with? */
+            OEngine::Physic::PhysicActor *physicActor = engine->getCharacter(ptr.getRefData().getHandle());
+            if(!physicActor || !physicActor->getCollisionMode())
+            {
+                // FIXME: This works, but it's inconcsistent with how the rotations are applied elsewhere. Why?
+                return position + (Ogre::Quaternion(Ogre::Radian(-refpos.rot[2]), Ogre::Vector3::UNIT_Z)*
+                                   Ogre::Quaternion(Ogre::Radian( refpos.rot[1]), Ogre::Vector3::UNIT_Y)*
+                                   Ogre::Quaternion(Ogre::Radian( refpos.rot[0]), Ogre::Vector3::UNIT_X)) *
+                                  movement;
+            }
+
+            traceResults trace; //no initialization needed
+            float remainingTime = time;
+            bool isInterior = !ptr.getCell()->isExterior();
+            float verticalRotation = physicActor->getRotation().getYaw().valueDegrees();
+            Ogre::Vector3 halfExtents = physicActor->getHalfExtents();
+
+            Ogre::Vector3 velocity;
+            if(!gravity)
+            {
+                velocity = (Ogre::Quaternion(Ogre::Radian(-refpos.rot[2]), Ogre::Vector3::UNIT_Z)*
+                            Ogre::Quaternion(Ogre::Radian( refpos.rot[1]), Ogre::Vector3::UNIT_Y)*
+                            Ogre::Quaternion(Ogre::Radian( refpos.rot[0]), Ogre::Vector3::UNIT_X)) *
+                           movement / time;
+            }
+            else
+            {
+                velocity = Ogre::Quaternion(Ogre::Radian(-refpos.rot[2]), Ogre::Vector3::UNIT_Z) *
+                           movement / time;
+                velocity.z = physicActor->getVerticalForce();
+            }
+
+            // we need a copy of the velocity before we start clipping it for steps
+            Ogre::Vector3 clippedVelocity(velocity);
+
+            if(gravity)
+            {
+                newtrace(&trace, position, position+Ogre::Vector3(0,0,-10), halfExtents, verticalRotation, isInterior, engine);
+                if(trace.fraction < 1.0f && getSlope(trace.planenormal) <= sMaxSlope)
+                {
+                    // if we're within 10 units of the ground, force velocity to track the ground
+                    clipVelocity(clippedVelocity, trace.planenormal, 1.0f);
+                }
+            }
+
+            Ogre::Vector3 lastNormal(0.0f);
+            Ogre::Vector3 currentNormal(0.0f);
+            Ogre::Vector3 up(0.0f, 0.0f, 1.0f);
+            Ogre::Vector3 newPosition = position;
+            int iterations = 0;
+            do {
+                // trace to where character would go if there were no obstructions
+                newtrace(&trace, newPosition, newPosition+clippedVelocity*remainingTime, halfExtents, verticalRotation, isInterior, engine);
+                newPosition = trace.endpos;
+                currentNormal = trace.planenormal;
+                remainingTime = remainingTime * (1.0f-trace.fraction);
+
+                // check for obstructions
+                if(trace.fraction < 1.0f)
+                {
+                    //std::cout<<"angle: "<<getSlope(trace.planenormal)<<"\n";
+                    if(getSlope(currentNormal) > sMaxSlope || currentNormal == lastNormal)
+                    {
+                        if(!stepMove(newPosition, velocity, remainingTime, verticalRotation, halfExtents, isInterior, engine))
+                        {
+                            Ogre::Vector3 resultantDirection = currentNormal.crossProduct(up);
+                            resultantDirection.normalise();
+                            clippedVelocity = velocity;
+                            projectVelocity(clippedVelocity, resultantDirection);
+
+                            // just this isn't enough sometimes. It's the same problem that causes steps to be necessary on even uphill terrain.
+                            clippedVelocity += currentNormal*clippedVelocity.length()/50.0f;
+                            //std::cout<< "clipped velocity: "<<clippedVelocity <<std::endl;
+                        }
+                        //else
+                        //    std::cout<< "stepped" <<std::endl;
+                    }
+                    else
+                        clipVelocity(clippedVelocity, currentNormal, 1.0f);
+                }
+
+                lastNormal = currentNormal;
+
+                iterations++;
+            } while(iterations < sMaxIterations && remainingTime > 0.0f);
+
+            physicActor->setVerticalForce(clippedVelocity.z - time*400.0f);
+
+            return newPosition;
+        }
+    };
+
+
     PhysicsSystem::PhysicsSystem(OEngine::Render::OgreRenderer &_rend) :
         mRender(_rend), mEngine(0), mFreeFly (true)
     {
-
-        playerphysics = new playerMove;
         // Create physics. shapeLoader is deleted by the physic engine
         NifBullet::ManualBulletShapeLoader* shapeLoader = new NifBullet::ManualBulletShapeLoader();
         mEngine = new OEngine::Physic::PhysicEngine(shapeLoader);
-        playerphysics->mEngine = mEngine;
     }
 
     PhysicsSystem::~PhysicsSystem()
     {
         delete mEngine;
-        delete playerphysics;
-
     }
+
     OEngine::Physic::PhysicEngine* PhysicsSystem::getEngine()
     {
         return mEngine;
@@ -106,15 +264,7 @@ namespace MWWorld
 
     void PhysicsSystem::setCurrentWater(bool hasWater, int waterHeight)
     {
-        playerphysics->hasWater = hasWater;
-        if(hasWater){
-            playerphysics->waterHeight = waterHeight;
-        }
-        for(std::map<std::string,OEngine::Physic::PhysicActor*>::iterator it = mEngine->PhysicActorMap.begin(); it != mEngine->PhysicActorMap.end();it++)
-        {
-            it->second->setCurrentWater(hasWater, waterHeight);
-        }
-
+        // TODO: store and use
     }
 
     btVector3 PhysicsSystem::getRayPoint(float extent)
@@ -185,71 +335,11 @@ namespace MWWorld
         }
     }
 
-    void PhysicsSystem::doPhysics(float dt, const std::vector<std::pair<std::string, Ogre::Vector3> >& actors)
+    Ogre::Vector3 PhysicsSystem::move(const MWWorld::Ptr &ptr, const Ogre::Vector3 &movement, float time, bool gravity)
     {
-        //set the DebugRenderingMode. To disable it,set it to 0
-        //eng->setDebugRenderingMode(1);
-
-        //set the movement keys to 0 (no movement) for every actor)
-        for(std::map<std::string,OEngine::Physic::PhysicActor*>::iterator it = mEngine->PhysicActorMap.begin(); it != mEngine->PhysicActorMap.end();it++)
-        {
-            OEngine::Physic::PhysicActor* act = it->second;
-            act->setMovement(0,0,0);
-        }
-
-        playerMove::playercmd& pm_ref = playerphysics->cmd;
-
-
-        pm_ref.rightmove = 0;
-        pm_ref.forwardmove = 0;
-        pm_ref.upmove = 0;
-       
-
-		//playerphysics->ps.move_type = PM_NOCLIP;
-        for (std::vector<std::pair<std::string, Ogre::Vector3> >::const_iterator iter (actors.begin());
-            iter!=actors.end(); ++iter)
-        {
-            //dirty stuff to get the camera orientation. Must be changed!
-            if (iter->first == "player") {
-                playerphysics->ps.viewangles.x =
-                    Ogre::Radian(mPlayerData.pitch).valueDegrees();
-
-
-
-                playerphysics->ps.viewangles.y =
-                    Ogre::Radian(mPlayerData.yaw).valueDegrees() + 90;
-
-                pm_ref.rightmove = iter->second.x;
-                pm_ref.forwardmove = -iter->second.y;
-                pm_ref.upmove = iter->second.z;
-            }
-        }
-        mEngine->stepSimulation(dt);
+        return MovementSolver::move(ptr, movement, time, gravity, mEngine);
     }
 
-    std::vector< std::pair<std::string, Ogre::Vector3> > PhysicsSystem::doPhysicsFixed (
-        const std::vector<std::pair<std::string, Ogre::Vector3> >& actors)
-    {
-        Pmove(playerphysics);
-       
-
-        std::vector< std::pair<std::string, Ogre::Vector3> > response;
-        for(std::map<std::string,OEngine::Physic::PhysicActor*>::iterator it = mEngine->PhysicActorMap.begin(); it != mEngine->PhysicActorMap.end();it++)
-        {
-
-            Ogre::Vector3 coord = it->second->getPosition();
-            if(it->first == "player"){
-
-                coord = playerphysics->ps.origin ;
-                 
-            }
-
-
-            response.push_back(std::pair<std::string, Ogre::Vector3>(it->first, coord));
-        }
-
-        return response;
-    }
 
     void PhysicsSystem::addHeightField (float* heights,
                 int x, int y, float yoffset,
@@ -311,26 +401,13 @@ namespace MWWorld
                 mEngine->boxAdjustExternal(handleToMesh[handle], body, node->getScale().x, position, node->getOrientation());
             }
         }
-        if (OEngine::Physic::PhysicActor* act = mEngine->getCharacter(handle))
-        {
-            // TODO very dirty hack to avoid crash during setup -> needs cleaning up to allow
-            // start positions others than 0, 0, 0
-            if (handle == "player")
-            {
-                playerphysics->ps.origin = position;
-            }
-            else
-            {
-                act->setPosition(position);
-            }
-        }
     }
 
     void PhysicsSystem::rotateObject (const Ptr& ptr)
     {
         Ogre::SceneNode* node = ptr.getRefData().getBaseNode();
-        std::string handle = node->getName();
-        Ogre::Quaternion rotation = node->getOrientation();
+        const std::string &handle = node->getName();
+        const Ogre::Quaternion &rotation = node->getOrientation();
         if (OEngine::Physic::PhysicActor* act = mEngine->getCharacter(handle))
         {
             //Needs to be changed
@@ -348,7 +425,7 @@ namespace MWWorld
     void PhysicsSystem::scaleObject (const Ptr& ptr)
     {
         Ogre::SceneNode* node = ptr.getRefData().getBaseNode();
-        std::string handle = node->getName();
+        const std::string &handle = node->getName();
         if(handleToMesh.find(handle) != handleToMesh.end())
         {
             removeObject(handle);
@@ -361,7 +438,6 @@ namespace MWWorld
 
     bool PhysicsSystem::toggleCollisionMode()
     {
-        playerphysics->ps.move_type = (playerphysics->ps.move_type == PM_NOCLIP ? PM_NORMAL : PM_NOCLIP);
         for(std::map<std::string,OEngine::Physic::PhysicActor*>::iterator it = mEngine->PhysicActorMap.begin(); it != mEngine->PhysicActorMap.end();it++)
         {
             if (it->first=="player")

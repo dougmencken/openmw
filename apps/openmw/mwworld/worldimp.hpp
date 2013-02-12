@@ -37,6 +37,7 @@ namespace MWRender
 {
     class SkyManager;
     class CellRender;
+    class Animation;
 }
 
 namespace MWWorld
@@ -264,8 +265,7 @@ namespace MWWorld
             virtual void positionToIndex (float x, float y, int &cellX, int &cellY) const;
             ///< Convert position to cell numbers
 
-            virtual void doPhysics (const std::vector<std::pair<std::string, Ogre::Vector3> >& actors,
-                float duration);
+            virtual void doPhysics(const PtrMovementList &actors, float duration);
             ///< Run physics simulation and modify \a world accordingly.
 
             virtual bool toggleCollisionMode();
@@ -297,18 +297,6 @@ namespace MWWorld
             ///< Create a new recrod (of type npc) in the ESM store.
             /// \return pointer to created record
 
-
-            virtual void playAnimationGroup (const MWWorld::Ptr& ptr, const std::string& groupName,
-                int mode, int number = 1);
-            ///< Run animation for a MW-reference. Calls to this function for references that are
-            /// currently not in the rendered scene should be ignored.
-            ///
-            /// \param mode: 0 normal, 1 immediate start, 2 immediate loop
-            /// \param number How offen the animation should be run
-
-            virtual void skipAnimation (const MWWorld::Ptr& ptr);
-            ///< Skip the animation for the given MW-reference for one frame. Calls to this function for
-            /// references that are currently not in the rendered scene should be ignored.
 
             virtual void update (float duration, bool paused);
 
@@ -359,6 +347,13 @@ namespace MWWorld
             /// 1 - only waiting \n
             /// 2 - player is underwater \n
             /// 3 - enemies are nearby (not implemented)
+
+            /// \todo Probably shouldn't be here
+            virtual OEngine::Physic::PhysicEngine* getPhysicEngine() const
+            { return mPhysEngine; }
+
+            /// \todo Probably shouldn't be here
+            virtual MWRender::Animation* getAnimation(const MWWorld::Ptr &ptr);
 
             /// \todo this does not belong here
             virtual void playVideo(const std::string& name, bool allowSkipping);
