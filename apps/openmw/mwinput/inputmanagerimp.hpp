@@ -148,10 +148,16 @@ namespace MWInput
         float mMouseX;
         float mMouseY;
         int mMouseWheel;
+        bool mDebug;
+        bool mUserFileExists;
 
         std::map<std::string, bool> mControlSwitch;
 
         bool mEnterPressed;
+
+    public:
+        virtual void create();
+        virtual void destroy();
 
     private:
         void adjustMouseRegion(int width, int height);

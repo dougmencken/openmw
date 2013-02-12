@@ -41,9 +41,11 @@ namespace MWInput
         , mMouseX(ogre.getWindow()->getWidth ()/2.f)
         , mMouseY(ogre.getWindow()->getHeight ()/2.f)
         , mMouseWheel(0)
-        , mUserFile(userFile)
         , mDragDrop(false)
         , mGuiCursorEnabled(false)
+        , mDebug(debug)
+        , mUserFile(userFile)
+        , mUserFileExists(userFileExists)
         , mInvertY (Settings::Manager::getBool("invert y axis", "Input"))
         , mCameraSensitivity (Settings::Manager::getFloat("camera sensitivity", "Input"))
         , mUISensitivity (Settings::Manager::getFloat("ui sensitivity", "Input"))
@@ -53,7 +55,15 @@ namespace MWInput
         , mTimeIdle(0.f)
         , mEnterPressed(false)
     {
-        Ogre::RenderWindow* window = ogre.getWindow ();
+        create();
+
+        changeInputMode(false);
+    }
+
+
+    void InputManager::create()
+    {
+        Ogre::RenderWindow* window = mOgre.getWindow ();
         size_t windowHnd;
 
         resetIdleTime();
@@ -68,7 +78,7 @@ namespace MWInput
 
         // Set non-exclusive mouse and keyboard input if the user requested
         // it.
-        if (debug)
+        if (mDebug)
         {
             #if defined OIS_WIN32_PLATFORM
             pl.insert(std::make_pair(std::string("w32_mouse"),
@@ -113,7 +123,7 @@ namespace MWInput
 
         MyGUI::InputManager::getInstance().injectMouseMove(mMouseX, mMouseY, mMouse->getMouseState ().Z.abs);
 
-        std::string file = userFileExists ? userFile : "";
+        std::string file = mUserFileExists ? mUserFile : "";
         mInputCtrl = new ICS::InputControlSystem(file, true, this, NULL, A_Last);
 
         loadKeyDefaults();
@@ -130,11 +140,9 @@ namespace MWInput
         mControlSwitch["playermagic"]         = true;
         mControlSwitch["playerviewswitch"]    = true;
         mControlSwitch["vanitymode"]          = true;
-
-        changeInputMode(false);
     }
 
-    InputManager::~InputManager()
+    void InputManager::destroy()
     {
         mInputCtrl->save (mUserFile);
 
@@ -143,6 +151,11 @@ namespace MWInput
         mInputManager->destroyInputObject(mKeyboard);
         mInputManager->destroyInputObject(mMouse);
         OIS::InputManager::destroyInputSystem(mInputManager);
+    }
+
+    InputManager::~InputManager()
+    {
+        destroy();
     }
 
     void InputManager::channelChanged(ICS::Channel* channel, float currentValue, float previousValue)
@@ -234,7 +247,7 @@ namespace MWInput
             case A_ToggleHUD:
                 mWindows.toggleHud();
                 break;
-         }
+            }
         }
     }
 

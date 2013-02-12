@@ -449,7 +449,7 @@ void OMW::Engine::go()
     // Save user settings
     settings.saveUser(settingspath);
 
-    std::cout << "Quitting peacefully.\n";
+    std::cout << "Quitting peacefully." << std::endl;
 }
 
 void OMW::Engine::activate()

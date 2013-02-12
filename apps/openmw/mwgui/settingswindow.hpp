@@ -40,7 +40,6 @@ namespace MWGui
             MyGUI::Button* mFPSButton;
             MyGUI::ScrollBar* mViewDistanceSlider;
             MyGUI::ScrollBar* mFOVSlider;
-            MyGUI::ScrollBar* mGammaSlider;
             MyGUI::ScrollBar* mAnisotropySlider;
             MyGUI::Button* mTextureFilteringButton;
             MyGUI::TextBox* mAnisotropyLabel;
@@ -50,7 +49,9 @@ namespace MWGui
             MyGUI::Button* mReflectActorsButton;
             MyGUI::Button* mReflectTerrainButton;
             MyGUI::Button* mShadersButton;
+            MyGUI::Button* mShaderModeButton;
             MyGUI::Button* mUnderwaterButton;
+            MyGUI::Button* mRefractionButton;
 
             MyGUI::Button* mShadowsEnabledButton;
             MyGUI::Button* mShadowsLargeDistance;
@@ -84,6 +85,7 @@ namespace MWGui
             void onResolutionCancel();
 
             void onShadersToggled(MyGUI::Widget* _sender);
+            void onShaderModeToggled(MyGUI::Widget* _sender);
             void onShadowTextureSize(MyGUI::Widget* _sender);
 
             void onRebindAction(MyGUI::Widget* _sender);

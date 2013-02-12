@@ -4,6 +4,7 @@
 #include <openengine/ogre/renderer.hpp>
 
 #include <OgreAxisAlignedBox.h>
+#include <OgreColourValue.h>
 
 namespace MWWorld
 {
@@ -90,6 +91,9 @@ namespace MWRender
         Ogre::SceneNode* mCameraPosNode;
         Ogre::SceneNode* mCameraRotNode;
 
+        // directional light from a fixed angle
+        Ogre::Light* mLight;
+
         float mAngle;
         const Ogre::Vector2 rotatePoint(const Ogre::Vector2& p, const Ogre::Vector2& c, const float angle);
 
@@ -113,6 +117,9 @@ namespace MWRender
         int mCellX, mCellY;
         Ogre::AxisAlignedBox mBounds;
         std::string mInteriorName;
+
+        // maps texture name to according camera settings
+        std::map<Ogre::RenderTarget*, Ogre::Vector3> mCameraSettings;
     };
 
 }

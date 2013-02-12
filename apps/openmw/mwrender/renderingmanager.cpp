@@ -46,7 +46,8 @@ namespace MWRender {
 
 RenderingManager::RenderingManager (OEngine::Render::OgreRenderer& _rend, const boost::filesystem::path& resDir,
                                     const boost::filesystem::path& cacheDir, OEngine::Physic::PhysicEngine* engine)
-    : mRendering(_rend), mObjects(mRendering), mActors(mRendering), mAmbientMode(0), mSunEnabled(0), mPhysicsEngine(engine)
+    : mRendering(_rend), mObjects(mRendering), mActors(mRendering), mAmbientMode(0), mSunEnabled(0), mPhysicsEngine(engine),
+      mRecreateWindowInNextFrame(false)
 {
     // select best shader mode
     bool openGL = (Ogre::Root::getSingleton ().getRenderSystem ()->getName().find("OpenGL") != std::string::npos);
@@ -61,6 +62,8 @@ RenderingManager::RenderingManager (OEngine::Render::OgreRenderer& _rend, const 
 
     mRendering.createScene("PlayerCam", Settings::Manager::getFloat("field of view", "General"), 5);
     mRendering.setWindowEventListener(this);
+
+    mRendering.getWindow()->addListener(this);
 
     mCompositors = new Compositors(mRendering.getViewport());
 
@@ -133,8 +136,7 @@ RenderingManager::RenderingManager (OEngine::Render::OgreRenderer& _rend, const 
     sh::Factory::getInstance ().setSharedParameter ("waterTimer", sh::makeProperty<sh::FloatValue>(new sh::FloatValue(0)));
     sh::Factory::getInstance ().setSharedParameter ("windDir_windSpeed", sh::makeProperty<sh::Vector3>(new sh::Vector3(0.5, -0.8, 0.2)));
     sh::Factory::getInstance ().setSharedParameter ("waterSunFade_sunHeight", sh::makeProperty<sh::Vector2>(new sh::Vector2(1, 0.6)));
-    sh::Factory::getInstance ().setSharedParameter ("gammaCorrection", sh::makeProperty<sh::FloatValue>(new sh::FloatValue(
-            Settings::Manager::getFloat ("gamma", "Video"))));
+    sh::Factory::getInstance ().setGlobalSetting ("refraction", Settings::Manager::getBool("refraction", "Water") ? "true" : "false");
 
     applyCompositors();
 
@@ -174,6 +176,7 @@ RenderingManager::RenderingManager (OEngine::Render::OgreRenderer& _rend, const 
 
 RenderingManager::~RenderingManager ()
 {
+    mRendering.getWindow()->removeListener(this);
     mRendering.removeWindowEventListener(this);
 
     delete mPlayer;
@@ -321,6 +324,33 @@ RenderingManager::moveObjectToCell(
 
 void RenderingManager::update (float duration, bool paused)
 {
+    if (mRecreateWindowInNextFrame)
+    {
+        mRecreateWindowInNextFrame = false;
+
+        mRendering.removeWindowEventListener(this);
+        mRendering.getWindow()->removeListener(this);
+        MWBase::Environment::get().getInputManager()->destroy();
+
+        OEngine::Render::WindowSettings windowSettings;
+        windowSettings.fullscreen = Settings::Manager::getBool("fullscreen", "Video");
+        windowSettings.window_x = Settings::Manager::getInt("resolution x", "Video");
+        windowSettings.window_y = Settings::Manager::getInt("resolution y", "Video");
+        windowSettings.vsync = Settings::Manager::getBool("vsync", "Video");
+        std::string aa = Settings::Manager::getString("antialiasing", "Video");
+        windowSettings.fsaa = (aa.substr(0, 4) == "MSAA") ? aa.substr(5, aa.size()-5) : "0";
+        mRendering.recreateWindow("OpenMW", windowSettings);
+
+        MWBase::Environment::get().getInputManager()->create();
+        mRendering.setWindowEventListener (this);
+        mRendering.getWindow()->addListener(this);
+
+        // this is necessary, otherwise it would just endlessly wait for the last query and it would never return
+        delete mOcclusionQuery;
+        mOcclusionQuery = new OcclusionQuery(&mRendering, mSkyManager->getSunNode());
+    }
+
+
     Ogre::Vector3 orig, dest;
     mPlayer->setCameraDistance();
     if (!mPlayer->getPosition(orig, dest)) {
@@ -334,8 +364,9 @@ void RenderingManager::update (float duration, bool paused)
             mPlayer->setCameraDistance(test.second * orig.distance(dest), false, false);
         }
     }
+
     mOcclusionQuery->update(duration);
-    
+
     mVideoPlayer->update ();
 
     mRendering.update(duration);
@@ -386,8 +417,23 @@ void RenderingManager::update (float duration, bool paused)
                 *world->getPlayer().getPlayer().getCell()->mCell,
                 Ogre::Vector3(cam.x, -cam.z, cam.y))
         );
-        mWater->update(duration);
+
+        // MW to ogre coordinates
+        orig = Ogre::Vector3(orig.x, orig.z, -orig.y);
+        mWater->update(duration, orig);
     }
+}
+
+void RenderingManager::preRenderTargetUpdate(const RenderTargetEvent &evt)
+{
+    mOcclusionQuery->setActive(true);
+}
+
+void RenderingManager::postRenderTargetUpdate(const RenderTargetEvent &evt)
+{
+    // deactivate queries to make sure we aren't getting false results from several misc render targets
+    // (will be reactivated at the bottom of this method)
+    mOcclusionQuery->setActive(false);
 }
 
 void RenderingManager::waterAdded (MWWorld::Ptr::CellStore *store)
@@ -605,22 +651,28 @@ void RenderingManager::setAmbientColour(const Ogre::ColourValue& colour)
     mTerrainManager->setAmbient(colour);
 }
 
-void RenderingManager::sunEnable()
+void RenderingManager::sunEnable(bool real)
 {
-    // Don't disable the light, as the shaders assume the first light to be directional.
-    //if (mSun) mSun->setVisible(true);
-    mSunEnabled = true;
+    if (real && mSun) mSun->setVisible(true);
+    else
+    {
+        // Don't disable the light, as the shaders assume the first light to be directional.
+        mSunEnabled = true;
+    }
 }
 
-void RenderingManager::sunDisable()
+void RenderingManager::sunDisable(bool real)
 {
-    // Don't disable the light, as the shaders assume the first light to be directional.
-    //if (mSun) mSun->setVisible(false);
-    mSunEnabled = false;
-    if (mSun)
+    if (real && mSun) mSun->setVisible(false);
+    else
     {
-        mSun->setDiffuseColour(ColourValue(0,0,0));
-        mSun->setSpecularColour(ColourValue(0,0,0));
+        // Don't disable the light, as the shaders assume the first light to be directional.
+        mSunEnabled = false;
+        if (mSun)
+        {
+            mSun->setDiffuseColour(ColourValue(0,0,0));
+            mSun->setSpecularColour(ColourValue(0,0,0));
+        }
     }
 }
 
@@ -651,16 +703,16 @@ void RenderingManager::preCellChange(MWWorld::Ptr::CellStore* cell)
     mLocalMap->saveFogOfWar(cell);
 }
 
-void RenderingManager::disableLights()
+void RenderingManager::disableLights(bool sun)
 {
     mObjects.disableLights();
-    sunDisable();
+    sunDisable(sun);
 }
 
-void RenderingManager::enableLights()
+void RenderingManager::enableLights(bool sun)
 {
     mObjects.enableLights();
-    sunEnable();
+    sunEnable(sun);
 }
 
 const bool RenderingManager::useMRT()
@@ -732,6 +784,8 @@ Compositors* RenderingManager::getCompositors()
 void RenderingManager::processChangedSettings(const Settings::CategorySettingVector& settings)
 {
     bool changeRes = false;
+    bool recreateWindow = false;
+    bool rebuild = false; // rebuild static geometry (necessary after any material changes)
     for (Settings::CategorySettingVector::const_iterator it=settings.begin();
             it != settings.end(); ++it)
     {
@@ -749,6 +803,8 @@ void RenderingManager::processChangedSettings(const Settings::CategorySettingVec
                 || it->second == "resolution y"
                 || it->second == "fullscreen"))
             changeRes = true;
+        else if (it->first == "Video" && it->second == "vsync")
+            recreateWindow = true;
         else if (it->second == "field of view" && it->first == "General")
             mRendering.setFov(Settings::Manager::getFloat("field of view", "General"));
         else if ((it->second == "texture filtering" && it->first == "General")
@@ -769,23 +825,23 @@ void RenderingManager::processChangedSettings(const Settings::CategorySettingVec
             applyCompositors();
             sh::Factory::getInstance ().setGlobalSetting ("mrt_output", useMRT() ? "true" : "false");
             sh::Factory::getInstance ().setGlobalSetting ("simple_water", Settings::Manager::getBool("shader", "Water") ? "false" : "true");
-            mObjects.rebuildStaticGeometry ();
+            rebuild = true;
             mRendering.getViewport ()->setClearEveryFrame (true);
+        }
+        else if (it->second == "refraction" && it->first == "Water")
+        {
+            sh::Factory::getInstance ().setGlobalSetting ("refraction", Settings::Manager::getBool("refraction", "Water") ? "true" : "false");
+            rebuild = true;
         }
         else if (it->second == "underwater effect" && it->first == "Water")
         {
             sh::Factory::getInstance ().setGlobalSetting ("underwater_effects", Settings::Manager::getString("underwater effect", "Water"));
-            mObjects.rebuildStaticGeometry ();
+            rebuild = true;
         }
         else if (it->second == "shaders" && it->first == "Objects")
         {
             sh::Factory::getInstance ().setShadersEnabled (Settings::Manager::getBool("shaders", "Objects"));
-            mObjects.rebuildStaticGeometry ();
-        }
-        else if (it->second == "gamma" && it->first == "Video")
-        {
-            sh::Factory::getInstance ().setSharedParameter ("gammaCorrection", sh::makeProperty<sh::FloatValue>(new sh::FloatValue(
-                    Settings::Manager::getFloat ("gamma", "Video"))));
+            rebuild = true;
         }
         else if (it->second == "shader mode" && it->first == "General")
         {
@@ -798,13 +854,13 @@ void RenderingManager::processChangedSettings(const Settings::CategorySettingVec
             else
                 lang = sh::Language_CG;
             sh::Factory::getInstance ().setCurrentLanguage (lang);
-            mObjects.rebuildStaticGeometry ();
+            rebuild = true;
         }
         else if (it->first == "Shadows")
         {
             mShadows->recreate ();
 
-            mObjects.rebuildStaticGeometry ();
+            rebuild = true;
         }
     }
 
@@ -820,8 +876,18 @@ void RenderingManager::processChangedSettings(const Settings::CategorySettingVec
         mRendering.getWindow()->setFullscreen(Settings::Manager::getBool("fullscreen", "Video"), x, y);
     }
 
+    if (recreateWindow)
+    {
+        mRecreateWindowInNextFrame = true;
+        // We can not do this now, because this might get triggered from the input listener
+        // and destroying/recreating the input system at that point would cause a crash
+    }
+
     if (mWater)
         mWater->processChangedSettings(settings);
+
+    if (rebuild)
+        mObjects.rebuildStaticGeometry();
 }
 
 void RenderingManager::setMenuTransparency(float val)
@@ -847,8 +913,8 @@ void RenderingManager::windowResized(Ogre::RenderWindow* rw)
     mVideoPlayer->setResolution (rw->getWidth(), rw->getHeight());
 
     const Settings::CategorySettingVector& changed = Settings::Manager::apply();
-    MWBase::Environment::get().getInputManager()->processChangedSettings(changed); //FIXME
-    MWBase::Environment::get().getWindowManager()->processChangedSettings(changed); // FIXME
+    MWBase::Environment::get().getInputManager()->processChangedSettings(changed);
+    MWBase::Environment::get().getWindowManager()->processChangedSettings(changed);
 }
 
 void RenderingManager::windowClosed(Ogre::RenderWindow* rw)
@@ -858,9 +924,9 @@ void RenderingManager::windowClosed(Ogre::RenderWindow* rw)
 
 bool RenderingManager::waterShaderSupported()
 {
-    const RenderSystemCapabilities* caps = Root::getSingleton().getRenderSystem()->getCapabilities();
-    if (caps->getNumMultiRenderTargets() < 2 || !Settings::Manager::getBool("shaders", "Objects"))
-        return false;
+    //const RenderSystemCapabilities* caps = Root::getSingleton().getRenderSystem()->getCapabilities();
+    //if (caps->getNumMultiRenderTargets() < 2 || !Settings::Manager::getBool("shaders", "Objects"))
+        //return false;
     return true;
 }
 
@@ -869,14 +935,16 @@ void RenderingManager::applyCompositors()
     mCompositors->removeAll();
     if (useMRT())
     {
+        /*
         mCompositors->addCompositor("gbuffer", 0);
         mCompositors->setCompositorEnabled("gbuffer", true);
         mCompositors->addCompositor("gbufferFinalizer", 2);
         mCompositors->setCompositorEnabled("gbufferFinalizer", true);
+        */
     }
 
-    if (mWater)
-        mWater->assignTextures();
+    //if (mWater)
+        //mWater->assignTextures();
 }
 
 void RenderingManager::getTriangleBatchCount(unsigned int &triangles, unsigned int &batches)
