@@ -55,14 +55,6 @@ namespace MWInput
         , mTimeIdle(0.f)
         , mEnterPressed(false)
     {
-        create();
-
-        changeInputMode(false);
-    }
-
-
-    void InputManager::create()
-    {
         Ogre::RenderWindow* window = mOgre.getWindow ();
         size_t windowHnd;
 

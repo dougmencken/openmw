@@ -155,10 +155,6 @@ namespace MWInput
 
         bool mEnterPressed;
 
-    public:
-        virtual void create();
-        virtual void destroy();
-
     private:
         void adjustMouseRegion(int width, int height);
 
