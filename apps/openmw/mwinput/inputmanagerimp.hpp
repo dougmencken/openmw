@@ -84,6 +84,9 @@ namespace MWInput
         virtual void enableDetectingBindingMode (int action);
         virtual void resetToDefaultBindings();
 
+        virtual void create();
+        virtual void destroy();
+
     public:
         virtual bool keyPressed( const OIS::KeyEvent &arg );
         virtual bool keyReleased( const OIS::KeyEvent &arg );
@@ -130,6 +133,8 @@ namespace MWInput
         OIS::InputManager* mInputManager;
 
         std::string mUserFile;
+
+        bool mCreated;
 
         bool mDragDrop;
 

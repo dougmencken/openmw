@@ -53,7 +53,13 @@ namespace MWInput
         , mUIYMultiplier (Settings::Manager::getFloat("ui y multiplier", "Input"))
         , mPreviewPOVDelay(0.f)
         , mTimeIdle(0.f)
+        , mCreated(false)
         , mEnterPressed(false)
+    {
+        create();
+    }
+
+    void InputManager::create()
     {
         Ogre::RenderWindow* window = mOgre.getWindow ();
         size_t windowHnd;
@@ -132,6 +138,10 @@ namespace MWInput
         mControlSwitch["playermagic"]         = true;
         mControlSwitch["playerviewswitch"]    = true;
         mControlSwitch["vanitymode"]          = true;
+
+        changeInputMode(false);
+
+        mCreated = true;
     }
 
     void InputManager::destroy()
@@ -245,6 +255,8 @@ namespace MWInput
 
     void InputManager::update(float dt, bool loading)
     {
+        if (!mCreated) return;
+
         // Pressing enter when a messagebox is prompting for "ok" will activate the ok button 
         if(mEnterPressed && MWBase::Environment::get().getWindowManager()->isGuiMode() && MWBase::Environment::get().getWindowManager()->getMode() == MWGui::GM_InterMessageBox)
             MWBase::Environment::get().getWindowManager()->enterPressed();

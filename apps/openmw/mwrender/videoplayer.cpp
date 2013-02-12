@@ -282,8 +282,8 @@ class MovieAudioDecoder : public MWSound::Sound_Decoder
 
     AutoAVPacket mPacket;
     AVFrame *mFrame;
-    size_t mFramePos;
-    size_t mFrameSize;
+    ssize_t mFramePos;
+    ssize_t mFrameSize;
 
     double mAudioClock;
 

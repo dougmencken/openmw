@@ -163,7 +163,10 @@ static void fail(const std::string &msg)
 }
 
 
-static void buildAnimation(Ogre::Skeleton *skel, const std::string &name, const std::vector<const Nif::NiKeyframeController*> &ctrls, const std::vector<std::string> &targets, float startTime, float stopTime)
+static void buildAnimation(Ogre::Skeleton *skel, const std::string &name,
+                           const std::vector<const Nif::NiKeyframeController*> &ctrls,
+                           const std::vector<std::string> &targets,
+                           float startTime, float stopTime)
 {
     Ogre::Animation *anim = skel->createAnimation(name, stopTime-startTime);
 
@@ -177,11 +180,11 @@ static void buildAnimation(Ogre::Skeleton *skel, const std::string &name, const 
         /* Get the keyframes and make sure they're sorted first to last */
         const Nif::QuaternionKeyList &quatkeys = kf->mRotations;
         const Nif::Vector3KeyList &trankeys = kf->mTranslations;
-        const Nif::FloatKeyList &scalekeys = kf->mScales;
+        const Nif::RealKeyList &scalekeys = kf->mScales;
 
         Nif::QuaternionKeyList::VecType::const_iterator quatiter = quatkeys.mKeys.begin();
         Nif::Vector3KeyList::VecType::const_iterator traniter = trankeys.mKeys.begin();
-        Nif::FloatKeyList::VecType::const_iterator scaleiter = scalekeys.mKeys.begin();
+        Nif::RealKeyList::VecType::const_iterator scaleiter = scalekeys.mKeys.begin();
 
         Ogre::Bone *bone = skel->getBone(targets[i]);
         // NOTE: For some reason, Ogre doesn't like the node track ID being different from
@@ -265,7 +268,7 @@ static void buildAnimation(Ogre::Skeleton *skel, const std::string &name, const 
                 kframe->setScale(curscale);
             else
             {
-                Nif::FloatKeyList::VecType::const_iterator last = scaleiter-1;
+                Nif::RealKeyList::VecType::const_iterator last = scaleiter-1;
                 float diff = (curtime-last->mTime) / (scaleiter->mTime-last->mTime);
                 kframe->setScale(lastscale + ((curscale-lastscale)*diff));
             }

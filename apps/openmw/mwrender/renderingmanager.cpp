@@ -352,7 +352,6 @@ void RenderingManager::update (float duration, bool paused)
         mOcclusionQuery = new OcclusionQuery(&mRendering, mSkyManager->getSunNode());
     }
 
-
     Ogre::Vector3 orig, dest;
     mPlayer->setCameraDistance();
     if (!mPlayer->getPosition(orig, dest)) {
