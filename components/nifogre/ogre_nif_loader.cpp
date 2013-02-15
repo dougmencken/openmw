@@ -321,6 +321,11 @@ void buildBones(Ogre::Skeleton *skel, const Nif::Node *node, Ogre::Bone *&animro
     bone->setScale(Ogre::Vector3(node->trafo.scale));
     bone->setBindingPose();
 
+    if(!(node->recType == Nif::RC_NiNode || /* Nothing special; children traversed below */
+         node->recType == Nif::RC_RootCollisionNode /* handled in nifbullet (hopefully) */
+         ))
+        warn("Unhandled "+node->recName+" "+node->name+" in "+skel->getName());
+
     Nif::ControllerPtr ctrl = node->controller;
     while(!ctrl.empty())
     {
@@ -330,9 +335,6 @@ void buildBones(Ogre::Skeleton *skel, const Nif::Node *node, Ogre::Bone *&animro
             warn("Unhandled "+ctrl->recName+" from node "+node->name+" in "+skel->getName());
         ctrl = ctrl->next;
     }
-
-    if(!(node->recType == Nif::RC_NiNode))
-        warn("Unhandled "+node->recName+" "+node->name+" in "+skel->getName());
 
     Nif::ExtraPtr e = node->extra;
     while(!e.empty())
