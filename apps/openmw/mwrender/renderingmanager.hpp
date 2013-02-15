@@ -251,8 +251,6 @@ class RenderingManager: private RenderingInterface, public Ogre::WindowEventList
     MWRender::Compositors* mCompositors;
 
     VideoPlayer* mVideoPlayer;
-
-    bool mRecreateWindowInNextFrame;
 };
 
 }

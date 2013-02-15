@@ -144,7 +144,7 @@ namespace MWInput
         mCreated = true;
     }
 
-    void InputManager::destroy()
+    InputManager::~InputManager()
     {
         mInputCtrl->save (mUserFile);
 
@@ -153,11 +153,6 @@ namespace MWInput
         mInputManager->destroyInputObject(mKeyboard);
         mInputManager->destroyInputObject(mMouse);
         OIS::InputManager::destroyInputSystem(mInputManager);
-    }
-
-    InputManager::~InputManager()
-    {
-        destroy();
     }
 
     void InputManager::channelChanged(ICS::Channel* channel, float currentValue, float previousValue)
