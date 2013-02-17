@@ -3,6 +3,9 @@
 #include "esmreader.hpp"
 #include "esmwriter.hpp"
 
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/include/for_each.hpp>
+
 namespace ESM
 {
 
@@ -35,12 +38,7 @@ void Armor::load(ESMReader &esm)
     mScript = esm.getHNOString("SCRI");
 
     esm.getHNT(mData, "AODT", 24);
-    mData.mType = le32toh(mData.mType);
-    mData.mWeight = letoh_float(mData.mWeight);
-    mData.mValue = le32toh(mData.mValue);
-    mData.mHealth = le32toh(mData.mHealth);
-    mData.mEnchant = le32toh(mData.mEnchant);
-    mData.mArmor = le32toh(mData.mArmor);
+    boost::fusion::for_each(mData, SwapLEStruct());
 
     mIcon = esm.getHNOString("ITEX");
     mParts.load(esm);
@@ -53,13 +51,9 @@ void Armor::save(ESMWriter &esm)
     esm.writeHNCString("FNAM", mName);
     esm.writeHNOCString("SCRI", mScript);
 
-    mData.mType = htole32(mData.mType);
-    mData.mWeight = htole_float(mData.mWeight);
-    mData.mValue = htole32(mData.mValue);
-    mData.mHealth = htole32(mData.mHealth);
-    mData.mEnchant = htole32(mData.mEnchant);
-    mData.mArmor = htole32(mData.mArmor);
+    boost::fusion::for_each(mData, SwapLEStruct());
     esm.writeHNT("AODT", mData, 24);
+    boost::fusion::for_each(mData, SwapLEStruct());
 
     esm.writeHNOCString("ITEX", mIcon);
     mParts.save(esm);

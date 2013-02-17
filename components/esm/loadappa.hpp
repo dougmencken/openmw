@@ -3,6 +3,9 @@
 
 #include <string>
 
+#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+
 namespace ESM
 {
 
@@ -37,5 +40,14 @@ struct Apparatus
     void load(ESMReader &esm);
     void save(ESMWriter &esm);
 };
+
 }
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ESM::Apparatus::AADTstruct,
+    (int, mType)
+    (float, mQuality)
+    (float, mWeight)
+    (int, mValue))
+
 #endif

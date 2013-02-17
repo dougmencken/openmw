@@ -4,6 +4,9 @@
 #include <vector>
 #include <string>
 
+#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+
 namespace ESM
 {
 
@@ -89,5 +92,16 @@ struct Armor
     void load(ESMReader &esm);
     void save(ESMWriter &esm);
 };
+
 }
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ESM::Armor::AODTstruct,
+    (int, mType)
+    (float, mWeight)
+    (int, mValue)
+    (int, mHealth)
+    (int, mEnchant)
+    (int, mArmor))
+
 #endif

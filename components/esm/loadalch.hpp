@@ -3,6 +3,9 @@
 
 #include <string>
 
+#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+
 #include "effectlist.hpp"
 
 namespace ESM
@@ -30,6 +33,14 @@ struct Potion
 
     void load(ESMReader &esm);
     void save(ESMWriter &esm);
-    };
+};
+
 }
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ESM::Potion::ALDTstruct,
+    (float, mWeight)
+    (int, mValue)
+    (int, mAutoCalc))
+
 #endif

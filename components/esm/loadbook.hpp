@@ -3,6 +3,9 @@
 
 #include <string>
 
+#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+
 namespace ESM
 {
 /*
@@ -27,5 +30,15 @@ struct Book
     void load(ESMReader &esm);
     void save(ESMWriter &esm);
 };
+
 }
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ESM::Book::BKDTstruct,
+    (float, mWeight)
+    (int, mValue)
+    (int, mIsScroll)
+    (int, mSkillID)
+    (int, mEnchant))
+
 #endif
