@@ -625,16 +625,21 @@ void Record<ESM::Creature>::print()
     for (sit = mData.mSpells.mList.begin(); sit != mData.mSpells.mList.end(); sit++)
         std::cout << "  Spell: " << *sit << std::endl;
 
-    std::cout << "  Artifical Intelligence: " << mData.mHasAI << std::endl;
-    std::cout << "    AI Hello:" << (int)mData.mAiData.mHello << std::endl;
-    std::cout << "    AI Fight:" << (int)mData.mAiData.mFight << std::endl;
-    std::cout << "    AI Flee:" << (int)mData.mAiData.mFlee << std::endl;
-    std::cout << "    AI Alarm:" << (int)mData.mAiData.mAlarm << std::endl;
-    std::cout << "    AI U1:" << (int)mData.mAiData.mU1 << std::endl;
-    std::cout << "    AI U2:" << (int)mData.mAiData.mU2 << std::endl;
-    std::cout << "    AI U3:" << (int)mData.mAiData.mU3 << std::endl;
-    std::cout << "    AI U4:" << (int)mData.mAiData.mU4 << std::endl;
-    std::cout << "    AI Services:" << boost::format("0x%08X") % mData.mAiData.mServices << std::endl;
+    if (mData.mHasAI)
+    {
+        std::cout << "  Artifical Intelligence: true" << std::endl;
+        std::cout << "    AI Hello:" << (int)mData.mAiData.mHello << std::endl;
+        std::cout << "    AI Fight:" << (int)mData.mAiData.mFight << std::endl;
+        std::cout << "    AI Flee:" << (int)mData.mAiData.mFlee << std::endl;
+        std::cout << "    AI Alarm:" << (int)mData.mAiData.mAlarm << std::endl;
+        std::cout << "    AI U1:" << (int)mData.mAiData.mU1 << std::endl;
+        std::cout << "    AI U2:" << (int)mData.mAiData.mU2 << std::endl;
+        std::cout << "    AI U3:" << (int)mData.mAiData.mU3 << std::endl;
+        std::cout << "    AI U4:" << (int)mData.mAiData.mU4 << std::endl;
+        std::cout << "    AI Services:" << boost::format("0x%08X") % mData.mAiData.mServices << std::endl;
+    }
+    else
+        std::cout << "  Artifical Intelligence: false" << std::endl;
 
     std::vector<ESM::AIPackage>::iterator pit;
     for (pit = mData.mAiPackage.mList.begin(); pit != mData.mAiPackage.mList.end(); pit++)
@@ -996,13 +1001,11 @@ void Record<ESM::NPC>::print()
         std::cout << "  Faction: " << mData.mFaction << std::endl;
     std::cout << "  Flags: " << npcFlags(mData.mFlags) << std::endl;
 
-    // Seriously?
-    if (mData.mNpdt52.mGold == -10)
+    if (mData.mNpdtType == 12)
     {
         std::cout << "  Level: " << mData.mNpdt12.mLevel << std::endl;
         std::cout << "  Reputation: " << (int)mData.mNpdt12.mReputation << std::endl;
         std::cout << "  Disposition: " << (int)mData.mNpdt12.mDisposition << std::endl;
-        std::cout << "  Faction: " << (int)mData.mNpdt52.mFactionID << std::endl;
         std::cout << "  Rank: " << (int)mData.mNpdt12.mRank << std::endl;
         std::cout << "  Unknown1: "
                   << (unsigned int)((unsigned char)mData.mNpdt12.mUnknown1) << std::endl;
@@ -1012,10 +1015,11 @@ void Record<ESM::NPC>::print()
                   << (unsigned int)((unsigned char)mData.mNpdt12.mUnknown3) << std::endl;
         std::cout << "  Gold: " << (int)mData.mNpdt12.mGold << std::endl;
     }
-    else {
+    else if (mData.mNpdtType == 52) {
         std::cout << "  Level: " << mData.mNpdt52.mLevel << std::endl;
         std::cout << "  Reputation: " << (int)mData.mNpdt52.mReputation << std::endl;
         std::cout << "  Disposition: " << (int)mData.mNpdt52.mDisposition << std::endl;
+        std::cout << "  Faction ID: " << (int)mData.mNpdt52.mFactionID << std::endl;
         std::cout << "  Rank: " << (int)mData.mNpdt52.mRank << std::endl;
 
         std::cout << "  Attributes:" << std::endl;
@@ -1064,16 +1068,21 @@ void Record<ESM::NPC>::print()
             std::cout << "  Destination Cell: " << dit->mCellName << std::endl;
     }
 
-    std::cout << "  Artifical Intelligence: " << mData.mHasAI << std::endl;
-    std::cout << "    AI Hello:" << (int)mData.mAiData.mHello << std::endl;
-    std::cout << "    AI Fight:" << (int)mData.mAiData.mFight << std::endl;
-    std::cout << "    AI Flee:" << (int)mData.mAiData.mFlee << std::endl;
-    std::cout << "    AI Alarm:" << (int)mData.mAiData.mAlarm << std::endl;
-    std::cout << "    AI U1:" << (int)mData.mAiData.mU1 << std::endl;
-    std::cout << "    AI U2:" << (int)mData.mAiData.mU2 << std::endl;
-    std::cout << "    AI U3:" << (int)mData.mAiData.mU3 << std::endl;
-    std::cout << "    AI U4:" << (int)mData.mAiData.mU4 << std::endl;
-    std::cout << "    AI Services:" << boost::format("0x%08X") % mData.mAiData.mServices << std::endl;
+    if (mData.mHasAI)
+    {
+        std::cout << "  Artifical Intelligence: true" << std::endl;
+        std::cout << "    AI Hello:" << (int)mData.mAiData.mHello << std::endl;
+        std::cout << "    AI Fight:" << (int)mData.mAiData.mFight << std::endl;
+        std::cout << "    AI Flee:" << (int)mData.mAiData.mFlee << std::endl;
+        std::cout << "    AI Alarm:" << (int)mData.mAiData.mAlarm << std::endl;
+        std::cout << "    AI U1:" << (int)mData.mAiData.mU1 << std::endl;
+        std::cout << "    AI U2:" << (int)mData.mAiData.mU2 << std::endl;
+        std::cout << "    AI U3:" << (int)mData.mAiData.mU3 << std::endl;
+        std::cout << "    AI U4:" << (int)mData.mAiData.mU4 << std::endl;
+        std::cout << "    AI Services:" << boost::format("0x%08X") % mData.mAiData.mServices << std::endl;
+    }
+    else
+        std::cout << "  Artifical Intelligence: false" << std::endl;
 
     std::vector<ESM::AIPackage>::iterator pit;
     for (pit = mData.mAiPackage.mList.begin(); pit != mData.mAiPackage.mList.end(); pit++)
