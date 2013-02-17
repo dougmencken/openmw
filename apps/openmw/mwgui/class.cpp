@@ -230,10 +230,10 @@ void PickClassDialog::updateStats()
 
     for (int i = 0; i < 5; ++i)
     {
-        mMinorSkill[i]->setSkillNumber(klass->mData.mSkills[i][0]);
-        mMajorSkill[i]->setSkillNumber(klass->mData.mSkills[i][1]);
-        ToolTips::createSkillToolTip(mMinorSkill[i], klass->mData.mSkills[i][0]);
-        ToolTips::createSkillToolTip(mMajorSkill[i], klass->mData.mSkills[i][1]);
+        mMinorSkill[i]->setSkillNumber(klass->mData.mSkills[i]);
+        mMajorSkill[i]->setSkillNumber(klass->mData.mSkills[i+5]);
+        ToolTips::createSkillToolTip(mMinorSkill[i], klass->mData.mSkills[i]);
+        ToolTips::createSkillToolTip(mMajorSkill[i], klass->mData.mSkills[i+5]);
     }
 
     mClassImage->setImageTexture(std::string("textures\\levelup\\") + mCurrentClassId + ".dds");

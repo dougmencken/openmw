@@ -53,7 +53,7 @@ struct Class
     {
         int mAttribute[2]; // Attributes that get class bonus
         int mSpecialization; // 0 = Combat, 1 = Magic, 2 = Stealth
-        int mSkills[5][2]; // Minor and major skills.
+        int mSkills[10]; // Minor (0-4) and major (5-9) skills.
         int mIsPlayable; // 0x0001 - Playable class
 
         // I have no idea how to autocalculate these items...

@@ -122,19 +122,14 @@ namespace MWMechanics
                 }
             }
 
-            for (int i=0; i<2; ++i)
+            for (int i = 0; i < 10; ++i)
             {
-                int bonus = i==0 ? 10 : 25;
-
-                for (int i2=0; i2<5; ++i2)
+                int bonus = (i < 5) ? 10 /* for minor skills */ : 25 /* for major skills */;
+                int index = class_->mData.mSkills[i];
+                if (index>=0 && index<27)
                 {
-                    int index = class_->mData.mSkills[i2][i];
-
-                    if (index>=0 && index<27)
-                    {
-                        npcStats.getSkill (index).setBase (
-                            npcStats.getSkill (index).getBase() + bonus);
-                    }
+                    npcStats.getSkill(index).setBase (
+                        npcStats.getSkill(index).getBase() + bonus);
                 }
             }
 
@@ -302,10 +297,10 @@ namespace MWMechanics
             MWBase::WindowManager::SkillList majorSkills (5);
             MWBase::WindowManager::SkillList minorSkills (5);
 
-            for (int i=0; i<5; ++i)
+            for (int i = 0; i < 5; ++i)
             {
-                minorSkills[i] = cls->mData.mSkills[i][0];
-                majorSkills[i] = cls->mData.mSkills[i][1];
+                minorSkills[i] = cls->mData.mSkills[i];
+                majorSkills[i] = cls->mData.mSkills[i+5];
             }
 
             winMgr->configureSkills (majorSkills, minorSkills);

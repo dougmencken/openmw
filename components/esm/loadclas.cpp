@@ -26,9 +26,8 @@ void Class::load(ESMReader &esm)
     mData.mAttribute[0] = le32toh(mData.mAttribute[0]);
     mData.mAttribute[1] = le32toh(mData.mAttribute[1]);
     mData.mSpecialization = le32toh(mData.mSpecialization);
-    for (size_t i = 0; i < 5; i++)
-        for (size_t j = 0; j < 2; j++)
-            mData.mSkills[i][j] = le32toh(mData.mSkills[i][j]);
+    for (size_t i = 0; i < 10; i++)
+        mData.mSkills[i] = le32toh(mData.mSkills[i]);
     mData.mIsPlayable = le32toh(mData.mIsPlayable);
     mData.mCalc = le32toh(mData.mCalc);
 
@@ -45,9 +44,8 @@ void Class::save(ESMWriter &esm)
     mData.mAttribute[0] = htole32(mData.mAttribute[0]);
     mData.mAttribute[1] = htole32(mData.mAttribute[1]);
     mData.mSpecialization = htole32(mData.mSpecialization);
-    for (size_t i = 0; i < 5; i++)
-        for (size_t j = 0; j < 2; j++)
-            mData.mSkills[i][j] = htole32(mData.mSkills[i][j]);
+    for (size_t i = 0; i < 10; i++)
+        mData.mSkills[i] = htole32(mData.mSkills[i]);
     mData.mIsPlayable = htole32(mData.mIsPlayable);
     mData.mCalc = htole32(mData.mCalc);
     esm.writeHNT("CLDT", mData, 60);

@@ -568,12 +568,12 @@ void CharacterCreation::onCreateClassDialogDone(WindowBase* parWindow)
 
         std::vector<ESM::Skill::SkillEnum> majorSkills = mCreateClassDialog->getMajorSkills();
         std::vector<ESM::Skill::SkillEnum> minorSkills = mCreateClassDialog->getMinorSkills();
-        assert(majorSkills.size() >= sizeof(klass.mData.mSkills)/sizeof(klass.mData.mSkills[0]));
-        assert(minorSkills.size() >= sizeof(klass.mData.mSkills)/sizeof(klass.mData.mSkills[0]));
-        for (size_t i = 0; i < sizeof(klass.mData.mSkills)/sizeof(klass.mData.mSkills[0]); ++i)
+        assert(minorSkills.size() >= 5);
+        assert(majorSkills.size() >= 5);
+        for (size_t i = 0; i < 5; ++i)
         {
-            klass.mData.mSkills[i][1] = majorSkills[i];
-            klass.mData.mSkills[i][0] = minorSkills[i];
+            klass.mData.mSkills[i] = minorSkills[i];
+            klass.mData.mSkills[i+5] = majorSkills[i];
         }
 
         MWBase::Environment::get().getMechanicsManager()->setPlayerClass(klass);

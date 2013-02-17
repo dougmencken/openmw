@@ -133,16 +133,16 @@ float MWMechanics::NpcStats::getSkillGain (int skillIndex, const ESM::Class& cla
 
     float typeFactor = gmst.find ("fMiscSkillBonus")->getFloat();
 
-    for (int i=0; i<5; ++i)
-        if (class_.mData.mSkills[i][0]==skillIndex)
+    for (int i = 0; i < 5; ++i)
+        if (class_.mData.mSkills[i] == skillIndex)
         {
             typeFactor = gmst.find ("fMinorSkillBonus")->getFloat();
 
             break;
         }
 
-    for (int i=0; i<5; ++i)
-        if (class_.mData.mSkills[i][1]==skillIndex)
+    for (int i = 5; i < 10; ++i)
+        if (class_.mData.mSkills[i+5] == skillIndex)
         {
             typeFactor = gmst.find ("fMajorSkillBonus")->getFloat();
 
@@ -198,13 +198,12 @@ void MWMechanics::NpcStats::increaseSkill(int skillIndex, const ESM::Class &clas
 
     // if this is a major or minor skill of the class, increase level progress
     bool levelProgress = false;
-    for (int i=0; i<2; ++i)
-        for (int j=0; j<5; ++j)
-        {
-            int skill = class_.mData.mSkills[j][i];
-            if (skill == skillIndex)
-                levelProgress = true;
-        }
+    for (int i = 0; i < 10; ++i)
+    {
+        int skill = class_.mData.mSkills[i];
+        if (skill == skillIndex)
+            levelProgress = true;
+    }
 
     mLevelProgress += levelProgress;
 
