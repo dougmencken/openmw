@@ -168,7 +168,7 @@ void LocalMap::requestMap(MWWorld::Ptr::CellStore* cell,
     const int segsX = std::ceil( length.x / sSize );
     const int segsY = std::ceil( length.y / sSize );
 
-    mInteriorName = cell->mCell->mName;
+    mInteriorName = cell->mCell->getCellName();
 
     for (int x=0; x<segsX; ++x)
     {
@@ -178,7 +178,7 @@ void LocalMap::requestMap(MWWorld::Ptr::CellStore* cell,
             Vector2 newcenter = start + 4096;
 
             render(newcenter.x - center.x, newcenter.y - center.y, z.y, z.x, sSize, sSize,
-                cell->mCell->mName + "_" + coordStr(x,y));
+                cell->mCell->getCellName() + "_" + coordStr(x,y));
         }
     }
 }

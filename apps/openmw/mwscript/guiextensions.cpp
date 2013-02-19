@@ -101,8 +101,7 @@ namespace MWScript
 
             virtual void execute (Interpreter::Runtime& runtime)
             {
-                std::string cell = (runtime.getStringLiteral (runtime[0].mInteger));
-                Misc::StringUtils::toLower(cell);
+                std::string cell = Misc::StringUtils::lowerCase(runtime.getStringLiteral (runtime[0].mInteger));
                 runtime.pop();
 
                 // "Will match complete or partial cells, so ShowMap, "Vivec" will show cells Vivec and Vivec, Fred's House as well."
@@ -114,11 +113,10 @@ namespace MWScript
                 MWWorld::Store<ESM::Cell>::iterator it = cells.extBegin();
                 for (; it != cells.extEnd(); ++it)
                 {
-                    std::string name = it->mName;
-                    Misc::StringUtils::toLower(name);
+                    std::string name = Misc::StringUtils::lowerCase(it->getCellName());
                     if (name.find(cell) != std::string::npos)
                         MWBase::Environment::get().getWindowManager()->addVisitedLocation (
-                            it->mName,
+                            it->getCellName(),
                             it->getGridX(),
                             it->getGridY()
                         );
@@ -138,7 +136,7 @@ namespace MWScript
                 MWWorld::Store<ESM::Cell>::iterator it = cells.extBegin();
                 for (; it != cells.extEnd(); ++it)
                 {
-                    std::string name = it->mName;
+                    std::string name = it->getCellName();
                     if (name != "")
                         MWBase::Environment::get().getWindowManager()->addVisitedLocation (
                             name,
@@ -173,8 +171,7 @@ namespace MWScript
             extensions.registerInstruction ("enableclassmenu", "", opcodeEnableClassMenu);
             extensions.registerInstruction ("enablenamemenu", "", opcodeEnableNameMenu);
             extensions.registerInstruction ("enableracemenu", "", opcodeEnableRaceMenu);
-            extensions.registerInstruction ("enablestatreviewmenu", "",
-opcodeEnableStatsReviewMenu);
+            extensions.registerInstruction ("enablestatreviewmenu", "", opcodeEnableStatsReviewMenu);
 
             extensions.registerInstruction ("enableinventorymenu", "", opcodeEnableInventoryMenu);
             extensions.registerInstruction ("enablemagicmenu", "", opcodeEnableMagicMenu);

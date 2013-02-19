@@ -105,7 +105,7 @@ bool MWDialogue::Filter::testPlayer (const ESM::DialInfo& info) const
 
     // check cell
     if (!info.mCell.empty())
-        if (Misc::StringUtils::lowerCase (player.getCell()->mCell->mName) != Misc::StringUtils::lowerCase (info.mCell))
+        if (Misc::StringUtils::lowerCase(player.getCell()->mCell->getCellName()) != Misc::StringUtils::lowerCase(info.mCell))
             return false;
 
     return true;
@@ -430,7 +430,7 @@ bool MWDialogue::Filter::getSelectStructBoolean (const SelectWrapper& select) co
 
         case SelectWrapper::Function_Cell:
 
-            return Misc::StringUtils::lowerCase (mActor.getCell()->mCell->mName)==select.getName();
+            return Misc::StringUtils::lowerCase (mActor.getCell()->mCell->getCellName())==select.getName();
 
         case SelectWrapper::Function_SameGender:
 

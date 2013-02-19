@@ -237,8 +237,8 @@ void Debugging::enableCellPathgrid(MWWorld::Ptr::CellStore *store)
     Vector3 cellPathGridPos(0, 0, 0);
     if (store->mCell->isExterior())
     {
-        cellPathGridPos.x = store->mCell->mData.mX * ESM::Land::REAL_SIZE;
-        cellPathGridPos.y = store->mCell->mData.mY * ESM::Land::REAL_SIZE;
+        cellPathGridPos.x = store->mCell->getGridX() * ESM::Land::REAL_SIZE;
+        cellPathGridPos.y = store->mCell->getGridY() * ESM::Land::REAL_SIZE;
     }
     SceneNode *cellPathGrid = mPathGridRoot->createChildSceneNode(cellPathGridPos);
     cellPathGrid->attachObject(createPathgridLines(pathgrid));

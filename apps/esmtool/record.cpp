@@ -490,26 +490,25 @@ template<>
 void Record<ESM::Cell>::print()
 {
     // None of the cells have names...
-    if (mData.mName != "")
-        std::cout << "  Name: " << mData.mName << std::endl;
-    if (mData.mRegion != "")
-        std::cout << "  Region: " << mData.mRegion << std::endl;
-    std::cout << "  Flags: " << cellFlags(mData.mData.mFlags) << std::endl;
+    if (mData.getCellName() != "")
+        std::cout << "  Name: " << mData.getCellName() << std::endl;
+    if (mData.getRegionName() != "")
+        std::cout << "  Region: " << mData.getRegionName() << std::endl;
+    std::cout << "  Flags: " << cellFlags(mData.getFlags()) << std::endl;
 
     std::cout << "  Coordinates: " << " (" << mData.getGridX() << ","
               << mData.getGridY() << ")" << std::endl;
 
-    if (mData.mData.mFlags & ESM::Cell::Interior &&
-        !(mData.mData.mFlags & ESM::Cell::QuasiEx))
+    if (mData.isInterior())
     {
-        std::cout << "  Ambient Light Color: " << mData.mAmbi.mAmbient << std::endl;
-        std::cout << "  Sunlight Color: " << mData.mAmbi.mSunlight << std::endl;
-        std::cout << "  Fog Color: " << mData.mAmbi.mFog << std::endl;
-        std::cout << "  Fog Density: " << mData.mAmbi.mFogDensity << std::endl;
-        std::cout << "  Water Level: " << mData.mWater << std::endl;
+        std::cout << "  Ambient Light Color: " << mData.getAmbientColor() << std::endl;
+        std::cout << "  Sunlight Color: " << mData.getSunlightColor() << std::endl;
+        std::cout << "  Fog Color: " << mData.getFogColor() << std::endl;
+        std::cout << "  Fog Density: " << mData.getFogDensity() << std::endl;
+        std::cout << "  Water Level: " << mData.getWaterLevel() << std::endl;
     }
     else
-        std::cout << "  Map Color: " << boost::format("0x%08X") % mData.mMapColor << std::endl;
+        std::cout << "  Map Color: " << boost::format("0x%08X") % mData.getMapColor() << std::endl;
     std::cout << "  NAM0: " << mData.mNAM0 << std::endl;
 }
 

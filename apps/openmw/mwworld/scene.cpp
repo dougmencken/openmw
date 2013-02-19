@@ -147,8 +147,7 @@ namespace MWWorld
 
     void Scene::playerCellChange(MWWorld::CellStore *cell, const ESM::Position& pos, bool adjustPlayerPos)
     {
-        bool hasWater = cell->mCell->mData.mFlags & ESM::Cell::HasWater;
-        mPhysics->setCurrentWater(hasWater, cell->mCell->mWater);
+        mPhysics->setCurrentWater(cell->mCell->hasWater(), cell->mCell->getWaterLevel());
 
         MWBase::World *world = MWBase::Environment::get().getWorld();
         world->getPlayer().setCell(cell);
@@ -367,7 +366,7 @@ namespace MWWorld
         }
 
         // Load cell.
-        std::cout << "cellName: " << cell->mCell->mName << std::endl;
+        std::cout << "cellName: " << cell->mCell->getCellName() << std::endl;
 
         MWBase::Environment::get().getWindowManager ()->setLoadingProgress ("Loading cells", 0, 0, 1);
         loadCell (cell);
@@ -377,7 +376,7 @@ namespace MWWorld
         // adjust fog
         mRendering.switchToInterior();
         mRendering.configureFog(*mCurrentCell);
-        
+
         // adjust player
         playerCellChange (mCurrentCell, position);
 

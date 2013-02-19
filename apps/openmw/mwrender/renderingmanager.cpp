@@ -420,9 +420,9 @@ void RenderingManager::waterAdded (MWWorld::Ptr::CellStore *store)
     const MWWorld::Store<ESM::Land> &lands =
         MWBase::Environment::get().getWorld()->getStore().get<ESM::Land>();
 
-    if(store->mCell->mData.mFlags & ESM::Cell::HasWater
-        || ((store->mCell->isExterior())
-            && !lands.search(store->mCell->getGridX(),store->mCell->getGridY()) )) // always use water, if the cell does not have land.
+    if (store->mCell->hasWater() ||
+            ( store->mCell->isExterior() &&
+            !lands.search(store->mCell->getGridX(), store->mCell->getGridY()) )) // always use water, if the cell does not have land
     {
         if(mWater == 0)
             mWater = new MWRender::Water(mRendering.getCamera(), this, store->mCell);
@@ -519,9 +519,9 @@ bool RenderingManager::toggleRenderMode(int mode)
 void RenderingManager::configureFog(MWWorld::Ptr::CellStore &mCell)
 {
     Ogre::ColourValue color;
-    color.setAsABGR (mCell.mCell->mAmbi.mFog);
+    color.setAsABGR (mCell.mCell->getFogColor());
 
-    configureFog(mCell.mCell->mAmbi.mFogDensity, color);
+    configureFog(mCell.mCell->getFogDensity(), color);
 
     if (mWater)
         mWater->setViewportBackground (Ogre::ColourValue(0.8f, 0.9f, 1.0f));
@@ -571,7 +571,7 @@ void RenderingManager::setAmbientMode()
 
 void RenderingManager::configureAmbient(MWWorld::Ptr::CellStore &mCell)
 {
-    mAmbientColor.setAsABGR (mCell.mCell->mAmbi.mAmbient);
+    mAmbientColor.setAsABGR (mCell.mCell->getAmbientColor());
     setAmbientMode();
 
     // Create a "sun" that shines light downwards. It doesn't look
@@ -581,7 +581,7 @@ void RenderingManager::configureAmbient(MWWorld::Ptr::CellStore &mCell)
         mSun = mRendering.getScene()->createLight();
     }
     Ogre::ColourValue colour;
-    colour.setAsABGR (mCell.mCell->mAmbi.mSunlight);
+    colour.setAsABGR (mCell.mCell->getSunlightColor());
     mSun->setDiffuseColour (colour);
     mSun->setType(Ogre::Light::LT_DIRECTIONAL);
     mSun->setDirection(0,-1,0);

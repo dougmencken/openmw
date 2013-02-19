@@ -629,15 +629,15 @@ void WindowManager::changeCell(MWWorld::Ptr::CellStore* cell)
     if (cell->mCell->isExterior())
     {
         std::string name;
-        if (cell->mCell->mName != "")
+        if (cell->mCell->getCellName() != "")
         {
-            name = cell->mCell->mName;
-            mMap->addVisitedLocation ("#{sCell=" + name + "}", cell->mCell->getGridX (), cell->mCell->getGridY ());
+            name = cell->mCell->getCellName();
+            mMap->addVisitedLocation ("#{sCell=" + name + "}", cell->mCell->getGridX(), cell->mCell->getGridY());
         }
         else
         {
             const ESM::Region* region =
-                MWBase::Environment::get().getWorld()->getStore().get<ESM::Region>().search(cell->mCell->mRegion);
+                MWBase::Environment::get().getWorld()->getStore().get<ESM::Region>().search(cell->mCell->getRegionName());
             if (region)
                 name = region->mName;
             else
@@ -656,10 +656,10 @@ void WindowManager::changeCell(MWWorld::Ptr::CellStore* cell)
     }
     else
     {
-        mMap->setCellName( cell->mCell->mName );
-        mHud->setCellName( cell->mCell->mName );
-        mMap->setCellPrefix( cell->mCell->mName );
-        mHud->setCellPrefix( cell->mCell->mName );
+        mMap->setCellName( cell->mCell->getCellName() );
+        mHud->setCellName( cell->mCell->getCellName() );
+        mMap->setCellPrefix( cell->mCell->getCellName() );
+        mHud->setCellPrefix( cell->mCell->getCellName() );
     }
 
 }

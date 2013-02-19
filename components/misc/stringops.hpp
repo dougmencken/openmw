@@ -36,7 +36,7 @@ public:
     }
 
     /// Transforms input string to lower case w/o copy
-    static std::string &toLower(std::string &inout) {
+    static std::string & toLower(std::string &inout) {
         std::transform(
             inout.begin(),
             inout.end(),
@@ -52,6 +52,7 @@ public:
         std::string out = in;
         return toLower(out);
     }
+
 };
 
 

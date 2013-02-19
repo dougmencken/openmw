@@ -9,13 +9,13 @@
 
 MWWorld::Ptr::CellStore *MWWorld::Cells::getCellStore (const ESM::Cell *cell)
 {
-    if (cell->mData.mFlags & ESM::Cell::Interior)
+    if (!cell->isExterior())
     {
-        std::map<std::string, Ptr::CellStore>::iterator result = mInteriors.find (cell->mName);
+        std::map<std::string, Ptr::CellStore>::iterator result = mInteriors.find(cell->getCellName());
 
         if (result==mInteriors.end())
         {
-            result = mInteriors.insert (std::make_pair (cell->mName, Ptr::CellStore (cell))).first;
+            result = mInteriors.insert(std::make_pair(cell->getCellName(), Ptr::CellStore(cell))).first;
         }
 
         return &result->second;
@@ -102,14 +102,7 @@ MWWorld::Ptr::CellStore *MWWorld::Cells::getExterior (int x, int y)
         if (!cell)
         {
             // Cell isn't predefined. Make one on the fly.
-            ESM::Cell record;
-
-            record.mData.mFlags = 0;
-            record.mData.mX = x;
-            record.mData.mY = y;
-            record.mWater = 0;
-            record.mMapColor = 0;
-
+            ESM::Cell record(x, y);
             cell = MWBase::Environment::get().getWorld()->createRecord (record);
         }
 

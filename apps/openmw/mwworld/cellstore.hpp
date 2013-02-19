@@ -154,9 +154,9 @@ namespace MWWorld
     }
 
     bool operator==(const CellStore &cell) {
-        return  mCell->mName == cell.mCell->mName &&
-                mCell->mData.mX == cell.mCell->mData.mX &&
-                mCell->mData.mY == cell.mCell->mData.mY;
+        return  mCell->getCellName() == cell.mCell->getCellName() &&
+                mCell->getGridX() == cell.mCell->getGridX() &&
+                mCell->getGridY() == cell.mCell->getGridY();
     }
 
     bool operator!=(const CellStore &cell) {

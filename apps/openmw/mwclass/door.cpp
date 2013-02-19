@@ -239,12 +239,12 @@ namespace MWClass
             int x,y;
             MWBase::Environment::get().getWorld()->positionToIndex (door.mRef.mDoorDest.pos[0], door.mRef.mDoorDest.pos[1], x, y);
             const ESM::Cell* cell = store.get<ESM::Cell>().find(x,y);
-            if (cell->mName != "")
-                dest = cell->mName;
+            if (cell->getCellName() != "")
+                dest = cell->getCellName();
             else
             {
                 const ESM::Region* region =
-                    store.get<ESM::Region>().find(cell->mRegion);
+                    store.get<ESM::Region>().find(cell->getRegionName());
 
                 //name as is, not a token
                 return region->mName;

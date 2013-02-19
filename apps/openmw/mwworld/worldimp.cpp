@@ -344,14 +344,14 @@ namespace MWWorld
         Ptr::CellStore *cell = mWorldScene->getCurrentCell();
         if (cell->mCell->isExterior())
         {
-            if (cell->mCell->mName != "")
+            if (cell->mCell->getCellName() != "")
             {
-                name = cell->mCell->mName;
+                name = cell->mCell->getCellName();
             }
             else
             {
                 const ESM::Region* region =
-                    MWBase::Environment::get().getWorld()->getStore().get<ESM::Region>().search(cell->mCell->mRegion);
+                    MWBase::Environment::get().getWorld()->getStore().get<ESM::Region>().search(cell->mCell->getRegionName());
                 if (region)
                     name = region->mName;
                 else
@@ -369,7 +369,7 @@ namespace MWWorld
         }
         else
         {
-            name = cell->mCell->mName;
+            name = cell->mCell->getCellName();
         }
 
         return name;
@@ -737,7 +737,7 @@ namespace MWWorld
             if (isPlayer)
             {
                 if (!newCell.isExterior())
-                    changeToInteriorCell(Misc::StringUtils::lowerCase(newCell.mCell->mName), pos);
+                    changeToInteriorCell(Misc::StringUtils::lowerCase(newCell.mCell->getCellName()), pos);
                 else
                 {
                     int cellX = newCell.mCell->getGridX();
@@ -1184,12 +1184,7 @@ namespace MWWorld
     {
         Ptr::CellStore *currentCell = mWorldScene->getCurrentCell();
         if (currentCell)
-        {
-            if (!(currentCell->mCell->mData.mFlags & ESM::Cell::QuasiEx))
-                return false;
-            else
-                return true;
-        }
+            return currentCell->mCell->isQuasiExterior();
         return false;
     }
 
@@ -1395,10 +1390,9 @@ namespace MWWorld
     bool
     World::isUnderwater(const ESM::Cell &cell, const Ogre::Vector3 &pos) const
     {
-        if (!(cell.mData.mFlags & ESM::Cell::HasWater)) {
+        if (!cell.hasWater())
             return false;
-        }
-        return pos.z < cell.mWater;
+        return pos.z < cell.getWaterLevel();
     }
 
     bool World::isOnGround(const MWWorld::Ptr &ptr) const
@@ -1426,9 +1420,9 @@ namespace MWWorld
         Ogre::Vector3 playerPos(refdata.getPosition().pos);
 
         const OEngine::Physic::PhysicActor *physactor = mPhysEngine->getCharacter(refdata.getHandle());
-        if(!physactor->getOnGround() || isUnderwater(*currentCell->mCell, playerPos))
+        if (!physactor->getOnGround() || isUnderwater(*currentCell->mCell, playerPos))
             return 2;
-        if((currentCell->mCell->mData.mFlags&ESM::Cell::NoSleep))
+        if (currentCell->mCell->isNoSleepCell())
             return 1;
 
         return 0;

@@ -115,7 +115,7 @@ namespace MWGui
             int x,y;
             MWBase::Environment::get().getWorld()->positionToIndex(mPtr.get<ESM::NPC>()->mBase->mTransport[i].mPos.pos[0],
                                                                    mPtr.get<ESM::NPC>()->mBase->mTransport[i].mPos.pos[1],x,y);
-            if(cellname == "") {cellname = MWBase::Environment::get().getWorld()->getExterior(x,y)->mCell->mName; interior=  false;}
+            if(cellname == "") {cellname = MWBase::Environment::get().getWorld()->getExterior(x,y)->mCell->getCellName(); interior=false;}
             addDestination(cellname,mPtr.get<ESM::NPC>()->mBase->mTransport[i].mPos,interior);
         }
 

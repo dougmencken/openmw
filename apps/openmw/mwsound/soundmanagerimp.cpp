@@ -458,9 +458,9 @@ namespace MWSound
             return;
         timePassed = 0;
 
-        if(regionName != current->mCell->mRegion)
+        if(regionName != current->mCell->getRegionName())
         {
-            regionName = current->mCell->mRegion;
+            regionName = current->mCell->getRegionName();
             total = 0;
         }
 
@@ -522,7 +522,7 @@ namespace MWSound
         const ESM::Cell *cell = player.getCell()->mCell;
 
         Environment env = Env_Normal;
-        if((cell->mData.mFlags&cell->HasWater) && mListenerPos.z < cell->mWater)
+        if (cell->hasWater() && mListenerPos.z < cell->getWaterLevel())
             env = Env_Underwater;
 
         mOutput->updateListener(

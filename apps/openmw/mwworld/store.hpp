@@ -19,7 +19,7 @@ namespace MWWorld
 
         virtual int getSize() const = 0;
         virtual void load(ESM::ESMReader &esm, const std::string &id) = 0;
-        
+
         virtual bool eraseStatic(const std::string &id) {return false;}
     };
 
@@ -391,10 +391,10 @@ namespace MWWorld
         struct ExtCmp
         {
             bool operator()(const ESM::Cell &x, const ESM::Cell &y) {
-                if (x.mData.mX == y.mData.mX) {
-                    return x.mData.mY < y.mData.mY;
+                if (x.getGridX() == y.getGridX()) {
+                    return x.getGridY() < y.getGridY();
                 }
-                return x.mData.mX < y.mData.mX;
+                return x.getGridX() < y.getGridX();
             }
         };
 
@@ -409,12 +409,12 @@ namespace MWWorld
 
         DynamicInt mDynamicInt;
         DynamicExt mDynamicExt;
-        
+
         const ESM::Cell *search(const ESM::Cell &cell) const {
             if (cell.isExterior()) {
                 return search(cell.getGridX(), cell.getGridY());
             }
-            return search(cell.mName);
+            return search(cell.getCellName());
         }
 
     public:
@@ -426,16 +426,15 @@ namespace MWWorld
         {}
 
         const ESM::Cell *search(const std::string &id) const {
-            ESM::Cell cell;
-            cell.mName = Misc::StringUtils::lowerCase(id);
+            std::string cellName = Misc::StringUtils::lowerCase(id);
 
-            std::map<std::string, ESM::Cell>::const_iterator it = mInt.find(cell.mName);
+            std::map<std::string, ESM::Cell>::const_iterator it = mInt.find(cellName);
 
-            if (it != mInt.end() && Misc::StringUtils::ciEqual(it->second.mName, id)) {
+            if (it != mInt.end() && Misc::StringUtils::ciEqual(it->second.getCellName(), cellName)) {
                 return &(it->second);
             }
 
-            DynamicInt::const_iterator dit = mDynamicInt.find(cell.mName);
+            DynamicInt::const_iterator dit = mDynamicInt.find(cellName);
             if (dit != mDynamicInt.end()) {
                 return &dit->second;
             }
@@ -444,9 +443,6 @@ namespace MWWorld
         }
 
         const ESM::Cell *search(int x, int y) const {
-            ESM::Cell cell;
-            cell.mData.mX = x, cell.mData.mY = y;
-
             std::pair<int, int> key(x, y);
             std::map<std::pair<int, int>, ESM::Cell>::const_iterator it = mExt.find(key);
             if (it != mExt.end()) {
@@ -462,9 +458,6 @@ namespace MWWorld
         }
 
         const ESM::Cell *searchOrCreate(int x, int y) {
-            ESM::Cell cell;
-            cell.mData.mX = x, cell.mData.mY = y;
-
             std::pair<int, int> key(x, y);
             std::map<std::pair<int, int>, ESM::Cell>::const_iterator it = mExt.find(key);
             if (it != mExt.end()) {
@@ -476,12 +469,9 @@ namespace MWWorld
                 return &dit->second;
             }
 
-            ESM::Cell *newCell = new ESM::Cell;
-            newCell->mData.mX = x;
-            newCell->mData.mY = y;
-            mExt[std::make_pair(x, y)] = *newCell;
-            delete newCell;
-            
+            ESM::Cell newCell(x, y);
+            mExt[std::make_pair(x, y)] = newCell;
+
             return &mExt[std::make_pair(x, y)];
         }
 
@@ -549,7 +539,7 @@ namespace MWWorld
         const ESM::Cell *searchExtByName(const std::string &id) const {
             std::vector<ESM::Cell *>::const_iterator it = mSharedExt.begin();
             for (; it != mSharedExt.end(); ++it) {
-                if (Misc::StringUtils::ciEqual((*it)->mName, id)) {
+                if (Misc::StringUtils::ciEqual((*it)->getCellName(), id)) {
                     return *it;
                 }
             }
@@ -560,7 +550,7 @@ namespace MWWorld
         const ESM::Cell *searchExtByRegion(const std::string &id) const {
             std::vector<ESM::Cell *>::const_iterator it = mSharedExt.begin();
             for (; it != mSharedExt.end(); ++it) {
-                if (Misc::StringUtils::ciEqual((*it)->mRegion, id)) {
+                if (Misc::StringUtils::ciEqual((*it)->getRegionName(), id)) {
                     return *it;
                 }
             }
@@ -576,7 +566,7 @@ namespace MWWorld
 
             std::vector<ESM::Cell *>::const_iterator it = mSharedInt.begin();
             for (; it != mSharedInt.end(); ++it) {
-                list.push_back((*it)->mName);
+                list.push_back((*it)->getCellName());
             }
         }
 
@@ -600,7 +590,7 @@ namespace MWWorld
                 ptr = &result.first->second;
                 mSharedExt.push_back(ptr);
             } else {
-                std::string key = Misc::StringUtils::lowerCase(cell.mName);
+                std::string key = Misc::StringUtils::lowerCase(cell.getCellName());
 
                 // duplicate insertions are avoided by search(ESM::Cell &)
                 std::pair<DynamicInt::iterator, bool> result =
@@ -616,7 +606,7 @@ namespace MWWorld
             if (cell.isExterior()) {
                 return erase(cell.getGridX(), cell.getGridY());
             }
-            return erase(cell.mName);
+            return erase(cell.getCellName());
         }
 
         bool erase(const std::string &id) {
@@ -767,17 +757,17 @@ namespace MWWorld
         }
 
         const ESM::Pathgrid *search(const ESM::Cell &cell) const {
-            if (cell.mData.mFlags & ESM::Cell::Interior) {
-                return search(cell.mName);
+            if (!cell.isExterior()) {
+                return search(cell.getCellName());
             }
-            return search(cell.mData.mX, cell.mData.mY);
+            return search(cell.getGridX(), cell.getGridY());
         }
 
         const ESM::Pathgrid *find(const ESM::Cell &cell) const {
-            if (cell.mData.mFlags & ESM::Cell::Interior) {
-                return find(cell.mName);
+            if (!cell.isExterior()) {
+                return find(cell.getCellName());
             }
-            return find(cell.mData.mX, cell.mData.mY);
+            return find(cell.getGridX(), cell.getGridY());
         }
 
         iterator begin() const {

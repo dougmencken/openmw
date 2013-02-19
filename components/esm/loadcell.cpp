@@ -8,6 +8,9 @@
 #include "esmreader.hpp"
 #include "esmwriter.hpp"
 
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/include/for_each.hpp>
+
 #include <apps/openmw/mwworld/store.hpp>
 #include <apps/openmw/mwworld/cellstore.hpp>
 
@@ -107,9 +110,7 @@ void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
     }
 
     esm.getHNT(mData, "DATA", 12);
-    mData.mFlags = le32toh(mData.mFlags);
-    mData.mX = le32toh(mData.mX);
-    mData.mY = le32toh(mData.mY);
+    boost::fusion::for_each(mData, SwapLEStruct());
 
     // Water level
     mWater = -1;
@@ -140,10 +141,7 @@ void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
         else
         {
             esm.getHNT(mAmbi, "AMBI", 16);
-            mAmbi.mAmbient = le32toh(mAmbi.mAmbient);
-            mAmbi.mSunlight = le32toh(mAmbi.mSunlight);
-            mAmbi.mFog = le32toh(mAmbi.mFog);
-            mAmbi.mFogDensity = letoh_float(mAmbi.mFogDensity);
+            boost::fusion::for_each(mAmbi, SwapLEStruct());
         }
     }
     else
@@ -162,7 +160,7 @@ void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
         esm.getHT(mNAM0);
         mNAM0 = le32toh(mNAM0);
     }
-    
+
     // preload moved references
     while (esm.isNextSub("MVRF")) {
         CellRef ref;
@@ -171,7 +169,7 @@ void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
 
         MWWorld::Store<ESM::Cell> &cStore = const_cast<MWWorld::Store<ESM::Cell>&>(store.get<ESM::Cell>());
         ESM::Cell *cellAlt = const_cast<ESM::Cell*>(cStore.searchOrCreate(cMRef.mTarget[0], cMRef.mTarget[1]));
-        
+
         // Get regular moved reference data. Adapted from CellStore::loadRefs. Maybe we can optimize the following
         //  implementation when the oher implementation works as well.
         getNextRef(esm, ref);
@@ -179,7 +177,7 @@ void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
 
         std::transform (ref.mRefID.begin(), ref.mRefID.end(), std::back_inserter (lowerCase),
             (int(*)(int)) std::tolower);
-                
+
         // Add data required to make reference appear in the correct cell.
         // We should not need to test for duplicates, as this part of the code is pre-cell merge.
         mMovedRefs.push_back(cMRef);
@@ -198,10 +196,9 @@ void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
 
 void Cell::save(ESMWriter &esm)
 {
-    mData.mFlags = htole32(mData.mFlags);
-    mData.mX = htole32(mData.mX);
-    mData.mY = htole32(mData.mY);
+    boost::fusion::for_each(mData, SwapLEStruct());
     esm.writeHNT("DATA", mData, 12);
+    boost::fusion::for_each(mData, SwapLEStruct());
 
     if (mData.mFlags & Interior)
     {
@@ -221,11 +218,9 @@ void Cell::save(ESMWriter &esm)
             esm.writeHNOCString("RGNN", mRegion);
         else
         {
-            mAmbi.mAmbient = htole32(mAmbi.mAmbient);
-            mAmbi.mSunlight = htole32(mAmbi.mSunlight);
-            mAmbi.mFog = htole32(mAmbi.mFog);
-            mAmbi.mFogDensity = htole_float(mAmbi.mFogDensity);
+            boost::fusion::for_each(mAmbi, SwapLEStruct());
             esm.writeHNT("AMBI", mAmbi, 16);
+            boost::fusion::for_each(mAmbi, SwapLEStruct());
         }
     }
     else

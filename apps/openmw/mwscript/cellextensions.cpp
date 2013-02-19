@@ -45,7 +45,7 @@ namespace MWScript
 
                     if (const ESM::Cell *exterior = MWBase::Environment::get().getWorld()->getExterior (cell))
                     {
-                        MWBase::Environment::get().getWorld()->indexToPosition (exterior->mData.mX, exterior->mData.mY,
+                        MWBase::Environment::get().getWorld()->indexToPosition (exterior->getGridX(), exterior->getGridY(),
                             pos.pos[0], pos.pos[1], true);
                         MWBase::Environment::get().getWorld()->changeToExteriorCell (pos);
                     }
@@ -104,12 +104,12 @@ namespace MWScript
 
                     const ESM::Cell *cell = MWBase::Environment::get().getWorld()->getPlayer().getPlayer().getCell()->mCell;
 
-                    std::string current = cell->mName;
+                    std::string current = cell->getCellName();
 
-                    if (!(cell->mData.mFlags & ESM::Cell::Interior) && current.empty())
+                    if (cell->isExterior() && current.empty())
                     {
                         const ESM::Region *region =
-                            MWBase::Environment::get().getWorld()->getStore().get<ESM::Region>().find (cell->mRegion);
+                            MWBase::Environment::get().getWorld()->getStore().get<ESM::Region>().find (cell->getRegionName());
 
                         current = region->mName;
                     }

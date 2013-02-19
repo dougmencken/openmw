@@ -22,7 +22,7 @@ namespace MWWorld
 
     template <>
     inline bool RecordCmp::operator()<ESM::Cell>(const ESM::Cell &x, const ESM::Cell &y) const {
-        return Misc::StringUtils::ciLess(x.mName, y.mName);
+        return Misc::StringUtils::ciLess(x.getCellName(), y.getCellName());
     }
 
     template <>

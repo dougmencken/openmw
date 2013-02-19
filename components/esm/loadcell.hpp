@@ -8,6 +8,8 @@
 #include "esmcommon.hpp"
 #include "defs.hpp"
 
+#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
 
 namespace MWWorld
 {
@@ -127,8 +129,9 @@ typedef std::list<CellRef> CellRefTracker;
    (using ESMReader::getContext()) and jumping back into place
    whenever we need to load a given cell.
  */
-struct Cell
+class Cell
 {
+public:
   enum Flags
     {
       Interior  = 0x01, // Interior cell
@@ -150,6 +153,7 @@ struct Cell
     float mFogDensity;
   };
 
+private:
   // Interior cells are indexed by this (it's the 'id'), for exterior
   // cells it is optional.
   std::string mName;
@@ -157,13 +161,16 @@ struct Cell
   // Optional region name for exterior and quasi-exterior cells.
   std::string mRegion;
 
-  std::vector<ESM_Context> mContextList; // File position; multiple positions for multiple plugin support
   DATAstruct mData;
   AMBIstruct mAmbi;
   float mWater; // Water level
-  bool mWaterInt;
+  bool mWaterInt; // converted from integer?
   int mMapColor;
+
+public:
   int mNAM0;
+
+  std::vector<ESM_Context> mContextList; // File position; multiple positions for multiple plugin support
 
   // References "leased" from another cell (i.e. a different cell
   //  introduced this ref, and it has been moved here by a plugin)
@@ -177,9 +184,64 @@ struct Cell
   void load(ESMReader &esm) {};
   void save(ESMWriter &esm);
 
+  Cell()
+  {
+      mData.mFlags = 0;
+      mWater = 0.0;
+      mMapColor = 0;
+  }
+
+  Cell(const std::string name)
+  {
+      mData.mFlags = 0;
+      mWater = 0.0;
+      mMapColor = 0;
+      mName = name;
+  }
+
+  Cell(int x, int y)
+  {
+      mData.mFlags = 0;
+      mData.mX = x;
+      mData.mY = y;
+      mWater = 0.0;
+      mMapColor = 0;
+  }
+
+  Cell(const std::string name, int x, int y)
+  {
+      mData.mFlags = 0;
+      mData.mX = x;
+      mData.mY = y;
+      mWater = 0.0;
+      mMapColor = 0;
+      mName = name;
+  }
+
   bool isExterior() const
   {
       return !(mData.mFlags & Interior);
+  }
+
+  bool isInterior() const
+  {
+      return (mData.mFlags & Interior) &&
+             (!(mData.mFlags & QuasiEx));
+  }
+
+  bool isQuasiExterior() const
+  {
+      return mData.mFlags & QuasiEx;
+  }
+
+  bool hasWater() const
+  {
+      return mData.mFlags & HasWater;
+  }
+
+  bool isNoSleepCell() const
+  {
+      return mData.mFlags & NoSleep;
   }
 
   int getGridX() const
@@ -190,6 +252,51 @@ struct Cell
   int getGridY() const
   {
       return mData.mY;
+  }
+
+  int getFlags() const
+  {
+      return mData.mFlags;
+  }
+
+  std::string getCellName() const
+  {
+      return mName;
+  }
+
+  std::string getRegionName() const
+  {
+      return mRegion;
+  }
+
+  Color getAmbientColor() const
+  {
+      return mAmbi.mAmbient;
+  }
+
+  Color getSunlightColor() const
+  {
+      return mAmbi.mSunlight;
+  }
+
+  Color getFogColor() const
+  {
+      return mAmbi.mFog;
+  }
+
+  float getFogDensity() const
+  {
+      return mAmbi.mFogDensity;
+  }
+
+  float getWaterLevel() const
+  {
+      return mWater;
+  }
+
+  int getMapColor() const
+  {
+      return mMapColor;
   }
 
   // Restore the given reader to the stored position. Will try to open
@@ -215,5 +322,20 @@ struct Cell
    */
   static bool getNextMVRF(ESMReader &esm, MovedCellRef &mref);
 };
+
 }
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ESM::Cell::DATAstruct,
+    (int, mFlags)
+    (int, mX)
+    (int, mY))
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ESM::Cell::AMBIstruct,
+    (ESM::Color, mAmbient)
+    (ESM::Color, mSunlight)
+    (ESM::Color, mFog)
+    (float, mFogDensity))
+
 #endif

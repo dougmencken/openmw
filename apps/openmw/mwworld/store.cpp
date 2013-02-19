@@ -12,13 +12,12 @@ void Store<ESM::Cell>::load(ESM::ESMReader &esm, const std::string &id)
     
     // All cells have a name record, even nameless exterior cells.
     std::string idLower = Misc::StringUtils::lowerCase(id);
-    ESM::Cell *cell = new ESM::Cell;
-    cell->mName = id;
+    ESM::Cell *cell = new ESM::Cell(id);
 
     // The cell itself takes care of some of the hairy details
     cell->load(esm, *mEsmStore);
 
-    if(cell->mData.mFlags & ESM::Cell::Interior)
+    if (!cell->isExterior())
     {
         // Store interior cell by name, try to merge with existing parent data.
         ESM::Cell *oldcell = const_cast<ESM::Cell*>(search(idLower));
@@ -57,7 +56,7 @@ void Store<ESM::Cell>::load(ESM::ESMReader &esm, const std::string &id)
             // have new cell replace old cell
             *oldcell = *cell;
         } else
-            mExt[std::make_pair(cell->mData.mX, cell->mData.mY)] = *cell;
+            mExt[std::make_pair(cell->getGridX(), cell->getGridY())] = *cell;
     }
     delete cell;
 }
