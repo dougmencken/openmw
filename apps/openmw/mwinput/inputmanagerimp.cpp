@@ -255,15 +255,12 @@ namespace MWInput
 
     void InputManager::update(float dt, bool loading)
     {
-<<<<<<< HEAD
         if (!mCreated) return;
 
         // Pressing enter when a messagebox is prompting for "ok" will activate the ok button 
         if(mEnterPressed && MWBase::Environment::get().getWindowManager()->isGuiMode() && MWBase::Environment::get().getWindowManager()->getMode() == MWGui::GM_InterMessageBox)
             MWBase::Environment::get().getWindowManager()->enterPressed();
 
-=======
->>>>>>> scrawl/graphics
         // Tell OIS to handle all input events
         mKeyboard->capture();
         mMouse->capture();

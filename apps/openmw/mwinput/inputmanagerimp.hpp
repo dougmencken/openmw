@@ -158,6 +158,8 @@ namespace MWInput
 
         std::map<std::string, bool> mControlSwitch;
 
+        bool mEnterPressed;
+
     private:
         void adjustMouseRegion(int width, int height);
 
