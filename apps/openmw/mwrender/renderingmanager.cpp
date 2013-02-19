@@ -129,7 +129,6 @@ RenderingManager::RenderingManager (OEngine::Render::OgreRenderer& _rend, const 
 
     sh::Factory::getInstance ().setShadersEnabled (Settings::Manager::getBool("shaders", "Objects"));
 
-    sh::Factory::getInstance ().setGlobalSetting ("mrt_output", useMRT() ? "true" : "false");
     sh::Factory::getInstance ().setGlobalSetting ("fog", "true");
     sh::Factory::getInstance ().setGlobalSetting ("lighting", "true");
     sh::Factory::getInstance ().setGlobalSetting ("num_lights", Settings::Manager::getString ("num lights", "Objects"));
@@ -144,6 +143,8 @@ RenderingManager::RenderingManager (OEngine::Render::OgreRenderer& _rend, const 
     sh::Factory::getInstance ().setSharedParameter ("windDir_windSpeed", sh::makeProperty<sh::Vector3>(new sh::Vector3(0.5, -0.8, 0.2)));
     sh::Factory::getInstance ().setSharedParameter ("waterSunFade_sunHeight", sh::makeProperty<sh::Vector2>(new sh::Vector2(1, 0.6)));
     sh::Factory::getInstance ().setGlobalSetting ("refraction", Settings::Manager::getBool("refraction", "Water") ? "true" : "false");
+    sh::Factory::getInstance ().setGlobalSetting ("viewproj_fix", "false");
+    sh::Factory::getInstance ().setSharedParameter ("vpRow2Fix", sh::makeProperty<sh::Vector4> (new sh::Vector4(0,0,0,0)));
 
     applyCompositors();
 
@@ -355,8 +356,6 @@ void RenderingManager::update (float duration, bool paused)
         Ogre::ControllerManager::getSingleton().setTimeFactor(0.f);
         return;
     }
-    Ogre::ControllerManager::getSingleton().setTimeFactor(
-                MWBase::Environment::get().getWorld()->getTimeScaleFactor()/30.f);
 
     mPlayer->update(duration);
 
@@ -683,11 +682,6 @@ void RenderingManager::enableLights(bool sun)
     sunEnable(sun);
 }
 
-const bool RenderingManager::useMRT()
-{
-    return Settings::Manager::getBool("shader", "Water");
-}
-
 Shadows* RenderingManager::getShadows()
 {
     return mShadows;
@@ -788,7 +782,6 @@ void RenderingManager::processChangedSettings(const Settings::CategorySettingVec
         else if (it->second == "shader" && it->first == "Water")
         {
             applyCompositors();
-            sh::Factory::getInstance ().setGlobalSetting ("mrt_output", useMRT() ? "true" : "false");
             sh::Factory::getInstance ().setGlobalSetting ("simple_water", Settings::Manager::getBool("shader", "Water") ? "false" : "true");
             rebuild = true;
             mRendering.getViewport ()->setClearEveryFrame (true);
@@ -866,7 +859,6 @@ void RenderingManager::windowResized(Ogre::RenderWindow* rw)
 
     mRendering.adjustViewport();
     mCompositors->recreate();
-    mWater->assignTextures();
 
     mVideoPlayer->setResolution (rw->getWidth(), rw->getHeight());
 
@@ -890,19 +882,6 @@ bool RenderingManager::waterShaderSupported()
 
 void RenderingManager::applyCompositors()
 {
-    mCompositors->removeAll();
-    if (useMRT())
-    {
-        /*
-        mCompositors->addCompositor("gbuffer", 0);
-        mCompositors->setCompositorEnabled("gbuffer", true);
-        mCompositors->addCompositor("gbufferFinalizer", 2);
-        mCompositors->setCompositorEnabled("gbufferFinalizer", true);
-        */
-    }
-
-    //if (mWater)
-        //mWater->assignTextures();
 }
 
 void RenderingManager::getTriangleBatchCount(unsigned int &triangles, unsigned int &batches)

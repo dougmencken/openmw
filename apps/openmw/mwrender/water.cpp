@@ -93,7 +93,6 @@ PlaneReflection::PlaneReflection(Ogre::SceneManager* sceneManager, SkyManager* s
     vp->setOverlaysEnabled(false);
     vp->setBackgroundColour(ColourValue(0.8f, 0.9f, 1.0f));
     vp->setShadowsEnabled(false);
-    // use fallback techniques without shadows and without mrt
     vp->setMaterialScheme("water_reflection");
     mRenderTarget->addListener(this);
     mRenderTarget->setActive(true);
@@ -124,7 +123,6 @@ void PlaneReflection::renderQueueEnded (Ogre::uint8 queueGroupId, const Ogre::St
 {
     if (queueGroupId < 20 && mRenderActive)
     {
-        // this trick does not seem to work well for extreme angles
         mCamera->enableCustomNearClipPlane(mIsUnderwater ? mErrorPlaneUnderwater : mErrorPlane);
         Root::getSingleton().getRenderSystem()->_setProjectionMatrix(mCamera->getProjectionMatrixRS());
     }
@@ -145,6 +143,15 @@ void PlaneReflection::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
     pos.y = (mWaterPlane).d*2 - pos.y;
     mSky->setSkyPosition(pos);
     mCamera->enableReflection(mWaterPlane);
+
+    // for depth calculation, we want the original viewproj matrix _without_ the custom near clip plane.
+    // since all we are interested in is depth, we only need the third row of the matrix.
+    Ogre::Matrix4 projMatrix = mCamera->getProjectionMatrixWithRSDepth () * mCamera->getViewMatrix ();
+    sh::Vector4* row3 = new sh::Vector4(projMatrix[2][0], projMatrix[2][1], projMatrix[2][2], projMatrix[2][3]);
+    sh::Factory::getInstance ().setSharedParameter ("vpRow2Fix", sh::makeProperty<sh::Vector4> (row3));
+
+    // enable clip plane here to take advantage of CPU culling for overwater or underwater objects
+    mCamera->enableCustomNearClipPlane(mIsUnderwater ? mErrorPlaneUnderwater : mErrorPlane);
 }
 
 void PlaneReflection::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
@@ -229,8 +236,6 @@ Water::Water (Ogre::Camera *camera, RenderingManager* rend, const ESM::Cell* cel
     mUnderwaterDome->setVisible(false);
     underwaterDome->setMaterialName("Underwater_Dome");
     */
-
-    assignTextures();
 
     setHeight(mTop);
 
@@ -360,22 +365,6 @@ Vector3 Water::getSceneNodeCoordinates(int gridX, int gridY)
     return Vector3(gridX * CELL_SIZE + (CELL_SIZE / 2), mTop, -gridY * CELL_SIZE - (CELL_SIZE / 2));
 }
 
-void Water::assignTextures()
-{
-    if (Settings::Manager::getBool("shader", "Water"))
-    {
-/*
-        CompositorInstance* compositor = CompositorManager::getSingleton().getCompositorChain(mRendering->getViewport())->getCompositor("gbuffer");
-
-        TexturePtr colorTexture = compositor->getTextureInstance("mrt_output", 0);
-        sh::Factory::getInstance ().setTextureAlias ("WaterRefraction", colorTexture->getName());
-
-        TexturePtr depthTexture = compositor->getTextureInstance("mrt_output", 1);
-        sh::Factory::getInstance ().setTextureAlias ("SceneDepth", depthTexture->getName());
-        */
-    }
-}
-
 void Water::setViewportBackground(const ColourValue& bg)
 {
     if (mReflection)
@@ -399,15 +388,14 @@ void Water::update(float dt, Ogre::Vector3 player)
     mUnderwaterDome->setPosition (pos);
     */
 
-    mWaterTimer += dt / 30.0 * MWBase::Environment::get().getWorld()->getTimeScaleFactor();
+    mWaterTimer += dt;
     sh::Factory::getInstance ().setSharedParameter ("waterTimer", sh::makeProperty<sh::FloatValue>(new sh::FloatValue(mWaterTimer)));
 
     mRendering->getSkyManager ()->setGlareEnabled (!mIsUnderwater);
 
-    /// \todo player.y is the scene node position (which is above the head) and not the feet position
     //if (player.y <= mTop)
     {
-        mSimulation->addImpulse(Ogre::Vector2(player.x, player.z));
+        //mSimulation->addImpulse(Ogre::Vector2(player.x, player.z));
     }
     mSimulation->update(dt, Ogre::Vector2(player.x, player.z));
 
@@ -481,7 +469,6 @@ void Water::processChangedSettings(const Settings::CategorySettingVector& settin
         applyRTT();
         applyVisibilityMask();
         mWater->setMaterial(mMaterial);
-        assignTextures();
     }
     if (applyVisMask)
         applyVisibilityMask();

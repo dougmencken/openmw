@@ -2,7 +2,6 @@
 
 
 #define FOG @shGlobalSettingBool(fog)
-#define MRT @shPropertyNotBool(is_transparent) && @shGlobalSettingBool(mrt_output)
 #define LIGHTING @shGlobalSettingBool(lighting)
 
 #define SHADOWS_PSSM LIGHTING && @shGlobalSettingBool(shadows_pssm)
@@ -12,7 +11,7 @@
     #include "shadows.h"
 #endif
 
-#if FOG || MRT || SHADOWS_PSSM
+#if FOG || SHADOWS_PSSM
 #define NEED_DEPTH
 #endif
 
@@ -24,12 +23,21 @@
 
 #define VERTEX_LIGHTING 1
 
+#define VIEWPROJ_FIX @shGlobalSettingBool(viewproj_fix)
+
 #ifdef SH_VERTEX_SHADER
 
     // ------------------------------------- VERTEX ---------------------------------------
 
     SH_BEGIN_PROGRAM
         shUniform(float4x4, wvp) @shAutoConstant(wvp, worldviewproj_matrix)
+
+#if VIEWPROJ_FIX
+        shUniform(float4x4, worldMatrix) @shAutoConstant(worldMatrix, world_matrix)
+        shUniform(float4, vpRow2Fix) @shSharedParameter(vpRow2Fix, vpRow2Fix)
+        shUniform(float4x4, vpMatrix) @shAutoConstant(vpMatrix, viewproj_matrix)
+#endif
+
         shVertexInput(float2, uv0)
         shOutput(float2, UV)
         shNormalInput(float4)
@@ -51,9 +59,9 @@
 
 #if VERTEX_LIGHTING
     shUniform(float, lightCount) @shAutoConstant(lightCount, light_count)
-    shUniform(float4, lightPosition[8]) @shAutoConstant(lightPosition, light_position_object_space_array, 8)
-    shUniform(float4, lightDiffuse[8]) @shAutoConstant(lightDiffuse, light_diffuse_colour_array, 8)
-    shUniform(float4, lightAttenuation[8]) @shAutoConstant(lightAttenuation, light_attenuation_array, 8)
+    shUniform(float4, lightPosition[@shGlobalSettingString(num_lights)]) @shAutoConstant(lightPosition, light_position_object_space_array, @shGlobalSettingString(num_lights))
+    shUniform(float4, lightDiffuse[@shGlobalSettingString(num_lights)]) @shAutoConstant(lightDiffuse, light_diffuse_colour_array, @shGlobalSettingString(num_lights))
+    shUniform(float4, lightAttenuation[@shGlobalSettingString(num_lights)]) @shAutoConstant(lightAttenuation, light_attenuation_array, @shGlobalSettingString(num_lights))
     shUniform(float4, lightAmbient)                    @shAutoConstant(lightAmbient, ambient_light_colour)
 #if !HAS_VERTEXCOLOUR
     shUniform(float4, materialAmbient)                    @shAutoConstant(materialAmbient, surface_ambient_colour)
@@ -66,7 +74,6 @@
 #if SHADOWS
         shOutput(float4, lightSpacePos0)
         shUniform(float4x4, texViewProjMatrix0) @shAutoConstant(texViewProjMatrix0, texture_viewproj_matrix)
-        shUniform(float4x4, worldMatrix) @shAutoConstant(worldMatrix, world_matrix)
 #endif
 
 #if SHADOWS_PSSM
@@ -74,7 +81,9 @@
         shOutput(float4, lightSpacePos@shIterator)
         shUniform(float4x4, texViewProjMatrix@shIterator) @shAutoConstant(texViewProjMatrix@shIterator, texture_viewproj_matrix, @shIterator)
     @shEndForeach
-        shUniform(float4x4, worldMatrix) @shAutoConstant(worldMatrix, world_matrix)
+#if !VIEWPROJ_FIX
+    shUniform(float4x4, worldMatrix) @shAutoConstant(worldMatrix, world_matrix)
+#endif
 #endif
 
 #if VERTEX_LIGHTING
@@ -90,7 +99,26 @@
 #endif
 
 #ifdef NEED_DEPTH
+
+
+#if VIEWPROJ_FIX
+        float4x4 vpFixed = vpMatrix;
+#if !SH_GLSL
+        vpFixed[2] = vpRow2Fix;
+#else
+        vpFixed[0][2] = vpRow2Fix.x;
+        vpFixed[1][2] = vpRow2Fix.y;
+        vpFixed[2][2] = vpRow2Fix.z;
+        vpFixed[3][2] = vpRow2Fix.w;
+#endif
+
+        float4x4 fixedWVP = shMatrixMult(vpFixed, worldMatrix);
+
+        depthPassthrough = shMatrixMult(fixedWVP, shInputPosition).z;
+#else
         depthPassthrough = shOutputPosition.z;
+#endif
+
 #endif
 
 #if LIGHTING
@@ -153,16 +181,9 @@
     SH_BEGIN_PROGRAM
 		shSampler2D(diffuseMap)
 		shInput(float2, UV)
-#if MRT
-        shDeclareMrtOutput(1)
-#endif
 
 #ifdef NEED_DEPTH
         shInput(float, depthPassthrough)
-#endif
-
-#if MRT
-        shUniform(float, far) @shAutoConstant(far, far_clip_distance)
 #endif
 
 #if LIGHTING
@@ -368,10 +389,6 @@
 
         float isUnderwater = (worldPos.y < waterLevel) ? 1.0 : 0.0;
         shOutputColour(0).xyz = shLerp (shOutputColour(0).xyz, watercolour, fogAmount * isUnderwater * waterEnabled);
-#endif
-
-#if MRT
-        shOutputColour(1) = float4(depthPassthrough / far,1,1,1);
 #endif
     }
 
