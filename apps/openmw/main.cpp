@@ -175,6 +175,7 @@ bool parseOptions (int argc, char** argv, OMW::Engine& engine, Files::Configurat
     if (variables.count ("version"))
     {
         std::cout << "OpenMW version " << OPENMW_VERSION << std::endl;
+        std::cout << "Copyright (c) 2008-2013 the OpenMW developers" << std::endl;
         run = false;
     }
 
