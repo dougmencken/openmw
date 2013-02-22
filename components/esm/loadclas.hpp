@@ -2,6 +2,11 @@
 #define OPENMW_ESM_CLAS_H
 
 #include <string>
+#include <boost/array.hpp>
+
+#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/utility/identity_type.hpp>
 
 namespace ESM
 {
@@ -51,9 +56,9 @@ struct Class
 
     struct CLDTstruct
     {
-        int mAttribute[2]; // Attributes that get class bonus
+        boost::array<int,2> mAttribute; // Attributes that get class bonus
         int mSpecialization; // 0 = Combat, 1 = Magic, 2 = Stealth
-        int mSkills[10]; // Minor (0-4) and major (5-9) skills.
+        boost::array<int,10> mSkills; // Minor (0-4) and major (5-9) skills.
         int mIsPlayable; // 0x0001 - Playable class
 
         // I have no idea how to autocalculate these items...
@@ -66,5 +71,15 @@ struct Class
     void load(ESMReader &esm);
     void save(ESMWriter &esm);
 };
+
 }
+
+BOOST_FUSION_ADAPT_STRUCT(
+    ESM::Class::CLDTstruct,
+    (BOOST_IDENTITY_TYPE((boost::array<int,2>)), mAttribute)
+    (int, mSpecialization)
+    (BOOST_IDENTITY_TYPE((boost::array<int,10>)), mSkills)
+    (int, mIsPlayable)
+    (int, mCalc))
+
 #endif

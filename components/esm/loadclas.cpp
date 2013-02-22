@@ -3,6 +3,9 @@
 #include "esmreader.hpp"
 #include "esmwriter.hpp"
 
+#include <boost/fusion/algorithm/iteration/for_each.hpp>
+#include <boost/fusion/include/for_each.hpp>
+
 namespace ESM
 {
 
@@ -22,14 +25,7 @@ void Class::load(ESMReader &esm)
 {
     mName = esm.getHNString("FNAM");
     esm.getHNT(mData, "CLDT", 60);
-
-    mData.mAttribute[0] = le32toh(mData.mAttribute[0]);
-    mData.mAttribute[1] = le32toh(mData.mAttribute[1]);
-    mData.mSpecialization = le32toh(mData.mSpecialization);
-    for (size_t i = 0; i < 10; i++)
-        mData.mSkills[i] = le32toh(mData.mSkills[i]);
-    mData.mIsPlayable = le32toh(mData.mIsPlayable);
-    mData.mCalc = le32toh(mData.mCalc);
+    boost::fusion::for_each(mData, SwapLEStruct());
 
     if (mData.mIsPlayable > 1)
         esm.fail("Unknown bool value");
@@ -41,14 +37,9 @@ void Class::save(ESMWriter &esm)
 {
     esm.writeHNCString("FNAM", mName);
 
-    mData.mAttribute[0] = htole32(mData.mAttribute[0]);
-    mData.mAttribute[1] = htole32(mData.mAttribute[1]);
-    mData.mSpecialization = htole32(mData.mSpecialization);
-    for (size_t i = 0; i < 10; i++)
-        mData.mSkills[i] = htole32(mData.mSkills[i]);
-    mData.mIsPlayable = htole32(mData.mIsPlayable);
-    mData.mCalc = htole32(mData.mCalc);
+    boost::fusion::for_each(mData, SwapLEStruct());
     esm.writeHNT("CLDT", mData, 60);
+    boost::fusion::for_each(mData, SwapLEStruct());
 
     esm.writeHNOString("DESC", mDescription);
 }
