@@ -4,6 +4,7 @@
 #include <libs/platform/stdint.h>
 #include <endian.h>
 #include <OgrePlatform.h>
+#include <boost/array.hpp>
 
 #define OPENMW_FOURCHAR(a,b,c,d) ((uint32_t)(((a)<<24) | ((b)<<16) | ((c)<<8) | (d)))
 
@@ -58,13 +59,39 @@ inline void endianSwap(T& t)
     }
 }
 
+namespace openmw
+{
+  struct false_type { enum { value = false }; };
+  struct true_type { enum { value = true }; };
+}
+
+template<typename T>
+struct is_array : openmw::false_type {};
+
+template<typename T, size_t N>
+struct is_array< boost::array<T,N> > : openmw::true_type {};
+
+template<typename T>
+void do_swap(T& t, openmw::false_type) {
+    // swap non-array types
+    endianSwap<T>(t);
+}
+
+template<typename T>
+void do_swap(T& t, openmw::true_type) {
+    // swap boost::array
+    size_t size = t.size();
+    for (size_t i = 0; i < size; i++)
+        endianSwap<typename T::value_type>(t[i]);
+}
+
 struct SwapLEStruct
 {
     template<typename T>
     void operator()(T& t) const
     {
 #if OGRE_ENDIAN == OGRE_ENDIAN_BIG
-        endianSwap<T>(t);
+        do_swap(t, is_array<T>());
 #elif OGRE_ENDIAN == OGRE_ENDIAN_LITTLE
         // do nothing
 #endif
@@ -79,7 +106,7 @@ struct SwapBEStruct
 #if OGRE_ENDIAN == OGRE_ENDIAN_BIG
         // do nothing
 #elif OGRE_ENDIAN == OGRE_ENDIAN_LITTLE
-        endianSwap<T>(t);
+        do_swap(t, is_array<T>());
 #endif
     }
 };
