@@ -101,7 +101,7 @@ void CellRef::save(ESMWriter &esm)
     }
 }
 
-void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
+void Cell::load(ESMReader &esm, bool saveContext)
 {
     // Ignore this for now, it might mean we should delete the entire cell?
     // TODO: treat the special case "another plugin moved this ref, but we want to delete it"!
@@ -160,6 +160,16 @@ void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
         esm.getHT(mNAM0);
         mNAM0 = le32toh(mNAM0);
     }
+
+    if (saveContext) {
+        mContextList.push_back(esm.getContext());
+        esm.skipRecord();
+    }
+}
+
+void Cell::load(ESMReader &esm, MWWorld::ESMStore &store)
+{
+    this->load(esm, false);
 
     // preload moved references
     while (esm.isNextSub("MVRF")) {
