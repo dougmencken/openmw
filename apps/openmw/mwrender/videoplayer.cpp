@@ -17,6 +17,8 @@
 #include "../mwsound/sound_decoder.hpp"
 #include "../mwsound/sound.hpp"
 
+#include "renderconst.hpp"
+
 #ifdef _WIN32
 #include <BaseTsd.h>
 
@@ -404,6 +406,8 @@ public:
             *type = MWSound::SampleType_UInt8;
         else if(mAVStream->codec->sample_fmt == AV_SAMPLE_FMT_S16)
             *type = MWSound::SampleType_Int16;
+        else if(mAVStream->codec->sample_fmt == AV_SAMPLE_FMT_FLT)
+            *type = MWSound::SampleType_Float32;
         else
             fail(std::string("Unsupported sample format: ")+
                  av_get_sample_fmt_name(mAVStream->codec->sample_fmt));
@@ -1065,9 +1069,9 @@ VideoPlayer::VideoPlayer(Ogre::SceneManager* sceneMgr)
     mBackgroundNode->attachObject(mBackgroundRectangle);
 
     mRectangle->setVisible(false);
-    mRectangle->setVisibilityFlags(0x1);
+    mRectangle->setVisibilityFlags(RV_Overlay);
     mBackgroundRectangle->setVisible(false);
-    mBackgroundRectangle->setVisibilityFlags(0x1);
+    mBackgroundRectangle->setVisibilityFlags(RV_Overlay);
 }
 
 VideoPlayer::~VideoPlayer()

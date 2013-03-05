@@ -11,6 +11,7 @@
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
 #include "../mwworld/player.hpp"
+#include "../mwworld/class.hpp"
 
 #include "renderconst.hpp"
 #include "npcanimation.hpp"
@@ -39,6 +40,15 @@ namespace MWRender
     void CharacterPreview::setup ()
     {
         mSceneMgr = Ogre::Root::getSingleton().createSceneManager(Ogre::ST_GENERIC);
+
+        /// \todo Read the fallback values from INIImporter (Inventory:Directional*)
+        Ogre::Light* l = mSceneMgr->createLight();
+        l->setType (Ogre::Light::LT_DIRECTIONAL);
+        l->setDirection (Ogre::Vector3(0.3, -0.7, 0.3));
+        l->setDiffuseColour (Ogre::ColourValue(1,1,1));
+
+        mSceneMgr->setAmbientLight (Ogre::ColourValue(0.5, 0.5, 0.5));
+
         mCamera = mSceneMgr->createCamera (mName);
         mCamera->setAspectRatio (float(mSizeX) / float(mSizeY));
 
@@ -50,7 +60,7 @@ namespace MWRender
         mNode = renderRoot->createChildSceneNode();
 
         mAnimation = new NpcAnimation(mCharacter, mNode,
-            MWWorld::Class::get(mCharacter).getInventoryStore (mCharacter), RV_PlayerPreview);
+            MWWorld::Class::get(mCharacter).getInventoryStore (mCharacter), 0);
 
         mNode->setVisible (false);
 
@@ -72,8 +82,6 @@ namespace MWRender
         mViewport->setOverlaysEnabled(false);
         mViewport->setBackgroundColour(Ogre::ColourValue(0, 0, 0, 0));
         mViewport->setShadowsEnabled(false);
-        mViewport->setMaterialScheme("local_map");
-        mViewport->setVisibilityMask (RV_PlayerPreview);
         mRenderTarget->setActive(true);
         mRenderTarget->setAutoUpdated (false);
 
@@ -94,7 +102,7 @@ namespace MWRender
         delete mAnimation;
 
         mAnimation = new NpcAnimation(mCharacter, mNode,
-            MWWorld::Class::get(mCharacter).getInventoryStore (mCharacter), RV_PlayerPreview);
+            MWWorld::Class::get(mCharacter).getInventoryStore (mCharacter), 0);
 
         mNode->setVisible (false);
 
@@ -110,6 +118,7 @@ namespace MWRender
 
     InventoryPreview::InventoryPreview(MWWorld::Ptr character)
         : CharacterPreview(character, 512, 1024, "CharacterPreview", Ogre::Vector3(0, 65, -180), Ogre::Vector3(0,65,0))
+        , mSelectionBuffer(NULL)
     {
     }
 
@@ -120,7 +129,8 @@ namespace MWRender
 
     void InventoryPreview::update(int sizeX, int sizeY)
     {
-        mAnimation->forceUpdate ();
+        mAnimation->forceUpdate();
+        mAnimation->runAnimation(0.0f);
 
         mViewport->setDimensions (0, 0, std::min(1.f, float(sizeX) / float(512)), std::min(1.f, float(sizeY) / float(1024)));
 
@@ -141,10 +151,10 @@ namespace MWRender
 
     void InventoryPreview::onSetup ()
     {
-        mSelectionBuffer = new OEngine::Render::SelectionBuffer(mCamera, 512, 1024, RV_PlayerPreview);
+        if (!mSelectionBuffer)
+            mSelectionBuffer = new OEngine::Render::SelectionBuffer(mCamera, 512, 1024, 0);
 
-        mAnimation->playGroup ("inventoryhandtohand", 0, 1);
-        mAnimation->runAnimation (0);
+        mAnimation->play("inventoryhandtohand", "start", "stop", false);
     }
 
     // --------------------------------------------------------------------------------------------------
@@ -160,6 +170,7 @@ namespace MWRender
 
     void RaceSelectionPreview::update(float angle)
     {
+        mAnimation->runAnimation(0.0f);
         mNode->roll(Ogre::Radian(angle), Ogre::SceneNode::TS_LOCAL);
 
         mNode->setVisible (true);
@@ -173,5 +184,10 @@ namespace MWRender
         mBase.mId = "player";
         rebuild();
         update(0);
+    }
+
+    void RaceSelectionPreview::onSetup ()
+    {
+        mAnimation->play("idle", "start", "stop", false);
     }
 }

@@ -20,6 +20,7 @@ void CSMDoc::Document::load (const std::vector<boost::filesystem::path>::const_i
         getData().loadFile (*end2, false);
 
     addOptionalGmsts();
+    addOptionalGlobals();
 }
 
 void CSMDoc::Document::addOptionalGmsts()
@@ -115,8 +116,7 @@ void CSMDoc::Document::addOptionalGmsts()
     {
         ESM::GameSetting gmst;
         gmst.mId = sFloats[i];
-        gmst.mF = 0;
-        gmst.mType = ESM::VT_Float;
+        gmst.mValue.setType (ESM::VT_Float);
         addOptionalGmst (gmst);
     }
 
@@ -124,8 +124,7 @@ void CSMDoc::Document::addOptionalGmsts()
     {
         ESM::GameSetting gmst;
         gmst.mId = sIntegers[i];
-        gmst.mI = 0;
-        gmst.mType = ESM::VT_Long;
+        gmst.mValue.setType (ESM::VT_Int);
         addOptionalGmst (gmst);
     }
 
@@ -133,9 +132,28 @@ void CSMDoc::Document::addOptionalGmsts()
     {
         ESM::GameSetting gmst;
         gmst.mId = sStrings[i];
-        gmst.mStr = "<no text>";
-        gmst.mType = ESM::VT_String;
+        gmst.mValue.setType (ESM::VT_String);
+        gmst.mValue.setString ("<no text>");
         addOptionalGmst (gmst);
+    }
+}
+
+void CSMDoc::Document::addOptionalGlobals()
+{
+    static const char *sGlobals[] =
+    {
+        "dayspassed",
+        "pcwerewolf",
+        "pcyear",
+        0
+    };
+
+    for (int i=0; sGlobals[i]; ++i)
+    {
+        ESM::Global global;
+        global.mId = sGlobals[i];
+        global.mValue.setType (ESM::VT_Long);
+        addOptionalGlobal (global);
     }
 }
 
@@ -150,6 +168,17 @@ void CSMDoc::Document::addOptionalGmst (const ESM::GameSetting& gmst)
     }
 }
 
+void CSMDoc::Document::addOptionalGlobal (const ESM::Global& global)
+{
+    if (getData().getGlobals().searchId (global.mId)==-1)
+    {
+        CSMWorld::Record<ESM::Global> record;
+        record.mBase = global;
+        record.mState = CSMWorld::RecordBase::State_BaseOnly;
+        getData().getGlobals().appendRecord (record);
+    }
+}
+
 void CSMDoc::Document::createBase()
 {
     static const char *sGlobals[] =
@@ -160,9 +189,14 @@ void CSMDoc::Document::createBase()
     for (int i=0; sGlobals[i]; ++i)
     {
         ESM::Global record;
+
         record.mId = sGlobals[i];
-        record.mValue = i==0 ? 1 : 0;
-        record.mType = ESM::VT_Float;
+
+        record.mValue.setType (i==2 ? ESM::VT_Float : ESM::VT_Int);
+
+        if (i==0)
+            record.mValue.setInteger (1);
+
         getData().getGlobals().add (record);
     }
 }
@@ -249,6 +283,7 @@ void CSMDoc::Document::abortOperation (int type)
 
     if (type==State_Saving)
     {
+        mSaveCount=0;
         mSaveTimer.stop();
         emit stateChanged (getState(), this);
     }

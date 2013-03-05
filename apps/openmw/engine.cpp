@@ -9,15 +9,15 @@
 #include <components/bsa/bsa_archive.hpp>
 #include <components/files/configurationmanager.hpp>
 #include <components/translation/translation.hpp>
+#include <components/nif/niffile.hpp>
 #include <components/nifoverrides/nifoverrides.hpp>
 
-#include <components/nifbullet/bullet_nif_loader.hpp>
-#include <components/nifogre/ogre_nif_loader.hpp>
+#include <components/nifbullet/bulletnifloader.hpp>
+#include <components/nifogre/ogrenifloader.hpp>
 
 #include "mwinput/inputmanagerimp.hpp"
 
 #include "mwgui/windowmanagerimp.hpp"
-#include "mwgui/cursorreplace.hpp"
 
 #include "mwscript/scriptmanagerimp.hpp"
 #include "mwscript/extensions.hpp"
@@ -62,18 +62,26 @@ void OMW::Engine::setAnimationVerbose(bool animverbose)
 {
 }
 
+bool OMW::Engine::frameStarted (const Ogre::FrameEvent& evt)
+{
+    if (!MWBase::Environment::get().getWindowManager()->isGuiMode())
+        MWBase::Environment::get().getWorld()->frameStarted(evt.timeSinceLastFrame);
+    return true;
+}
+
 bool OMW::Engine::frameRenderingQueued (const Ogre::FrameEvent& evt)
 {
     try
     {
-        mEnvironment.setFrameDuration (evt.timeSinceLastFrame);
+        float frametime = std::min(evt.timeSinceLastFrame, 0.2f);
+        mEnvironment.setFrameDuration(frametime);
 
         // update input
-        MWBase::Environment::get().getInputManager()->update(evt.timeSinceLastFrame, false);
+        MWBase::Environment::get().getInputManager()->update(frametime, false);
 
         // sound
         if (mUseSound)
-            MWBase::Environment::get().getSoundManager()->update (evt.timeSinceLastFrame);
+            MWBase::Environment::get().getSoundManager()->update(frametime);
 
         // global scripts
         MWBase::Environment::get().getScriptManager()->getGlobalScripts().run();
@@ -87,23 +95,19 @@ bool OMW::Engine::frameRenderingQueued (const Ogre::FrameEvent& evt)
 
         // passing of time
         if (!MWBase::Environment::get().getWindowManager()->isGuiMode())
-            MWBase::Environment::get().getWorld()->advanceTime (
-                mEnvironment.getFrameDuration()*MWBase::Environment::get().getWorld()->getTimeScaleFactor()/3600);
+            MWBase::Environment::get().getWorld()->advanceTime(
+                frametime*MWBase::Environment::get().getWorld()->getTimeScaleFactor()/3600);
 
 
         if (changed) // keep change flag for another frame, if cell changed happend in local script
             MWBase::Environment::get().getWorld()->markCellAsUnchanged();
 
         // update actors
-        std::vector<std::pair<std::string, Ogre::Vector3> > movement;
-        MWBase::Environment::get().getMechanicsManager()->update (movement, mEnvironment.getFrameDuration(),
+        MWBase::Environment::get().getMechanicsManager()->update(frametime,
             MWBase::Environment::get().getWindowManager()->isGuiMode());
 
-        if (!MWBase::Environment::get().getWindowManager()->isGuiMode())
-            MWBase::Environment::get().getWorld()->doPhysics (movement, mEnvironment.getFrameDuration());
-
         // update world
-        MWBase::Environment::get().getWorld()->update (evt.timeSinceLastFrame, MWBase::Environment::get().getWindowManager()->isGuiMode());
+        MWBase::Environment::get().getWorld()->update(frametime, MWBase::Environment::get().getWindowManager()->isGuiMode());
 
         // update GUI
         Ogre::RenderWindow* window = mOgre->getWindow();
@@ -111,7 +115,7 @@ bool OMW::Engine::frameRenderingQueued (const Ogre::FrameEvent& evt)
         MWBase::Environment::get().getWorld()->getTriangleBatchCount(tri, batch);
         MWBase::Environment::get().getWindowManager()->wmUpdateFps(window->getLastFPS(), tri, batch);
 
-        MWBase::Environment::get().getWindowManager()->onFrame(evt.timeSinceLastFrame);
+        MWBase::Environment::get().getWindowManager()->onFrame(frametime);
     }
     catch (const std::exception& e)
     {
@@ -215,7 +219,7 @@ void OMW::Engine::addMaster (const std::string& master)
 {
     mMaster.push_back(master);
     std::string &str = mMaster.back();
- 
+
     // Append .esm if not already there
     std::string::size_type sep = str.find_last_of (".");
     if (sep == std::string::npos)
@@ -303,7 +307,7 @@ void OMW::Engine::prepareEngine (Settings::Manager & settings)
     }
 
     mOgre = new OEngine::Render::OgreRenderer;
-    
+
     mOgre->configure(
         mCfgMgr.getLogPath().string(),
         renderSystem,
@@ -319,7 +323,6 @@ void OMW::Engine::prepareEngine (Settings::Manager & settings)
 
     addResourcesDirectory(mResDir / "mygui");
     addResourcesDirectory(mResDir / "water");
-    addResourcesDirectory(mResDir / "gbuffer");
     addResourcesDirectory(mResDir / "shadows");
     addZipResource(mResDir / "mygui" / "Obliviontt.zip");
 
@@ -335,9 +338,6 @@ void OMW::Engine::prepareEngine (Settings::Manager & settings)
 
     loadBSA();
 
-    // cursor replacer (converts the cursor from the bsa so they can be used by mygui)
-    MWGui::CursorReplace replacer;
-
     // Create the world
     mEnvironment.setWorld( new MWWorld::World (*mOgre, mFileCollections, mMaster, mPlugins,
         mResDir, mCfgMgr.getCachePath(), mNewGame, mEncoder, mFallbackMap,
@@ -345,7 +345,8 @@ void OMW::Engine::prepareEngine (Settings::Manager & settings)
 
     //Load translation data
     mTranslationDataStorage.setEncoder(mEncoder);
-    mTranslationDataStorage.loadTranslationData(mFileCollections, mMaster[0]);
+    for (size_t i = 0; i < mMaster.size(); i++)
+      mTranslationDataStorage.loadTranslationData(mFileCollections, mMaster[i]);
 
     // Create window manager - this manages all the MW-specific GUI windows
     MWScript::registerExtensions (mExtensions);
@@ -449,7 +450,7 @@ void OMW::Engine::go()
     // Save user settings
     settings.saveUser(settingspath);
 
-    std::cout << "Quitting peacefully.\n";
+    std::cout << "Quitting peacefully." << std::endl;
 }
 
 void OMW::Engine::activate()
